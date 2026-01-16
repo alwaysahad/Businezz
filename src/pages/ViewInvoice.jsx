@@ -155,21 +155,21 @@ function ViewInvoice() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Link to={`/invoices/edit/${invoice.id}`} className="btn-secondary flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Link to={`/invoices/edit/${invoice.id}`} className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none">
             <Edit className="w-4 h-4" />
-            Edit
+            <span className="hidden xs:inline">Edit</span>
           </Link>
-          <button onClick={handleDownloadPDF} className="btn-secondary flex items-center gap-2">
+          <button onClick={handleDownloadPDF} className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none">
             <Download className="w-4 h-4" />
-            Download
+            <span className="hidden xs:inline">Download</span>
           </button>
-          <button onClick={handlePrint} className="btn-secondary flex items-center gap-2">
+          <button onClick={handlePrint} className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none">
             <Printer className="w-4 h-4" />
-            Print
+            <span className="hidden xs:inline">Print</span>
           </button>
-          <div className="relative">
-            <button onClick={() => setShowShareMenu(!showShareMenu)} className="btn-primary flex items-center gap-2">
+          <div className="relative flex-1 sm:flex-none">
+            <button onClick={() => setShowShareMenu(!showShareMenu)} className="btn-primary flex items-center justify-center gap-2 w-full">
               <Share2 className="w-4 h-4" />
               Share
             </button>

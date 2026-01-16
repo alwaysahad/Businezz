@@ -178,35 +178,35 @@ function CreateInvoice() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-lg hover:bg-midnight-700 transition-colors"
+            className="p-2.5 -ml-1 rounded-lg hover:bg-midnight-700 active:bg-midnight-600 transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-midnight-300" />
           </button>
-          <div>
-            <h1 className="text-2xl font-display font-bold text-white">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-display font-bold text-white truncate">
               {isEditing ? 'Edit Invoice' : 'Create Invoice'}
             </h1>
-            <p className="text-midnight-400">{invoice.invoiceNumber}</p>
+            <p className="text-midnight-400 text-sm">{invoice.invoiceNumber}</p>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => handleSave('draft')}
-            className="btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none"
           >
             <Save className="w-4 h-4" />
-            Save Draft
+            <span>Save Draft</span>
           </button>
           <button
             onClick={() => handleSave('pending')}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none"
           >
             <Eye className="w-4 h-4" />
-            Save & Preview
+            <span>Save & Preview</span>
           </button>
         </div>
       </div>

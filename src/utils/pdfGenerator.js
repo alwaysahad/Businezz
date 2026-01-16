@@ -1,228 +1,201 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { formatCurrency, formatDate, numberToWords, calculateInvoiceTotals } from './helpers';
+import { formatDate, numberToWords, calculateInvoiceTotals } from './helpers';
+
+// PDF-safe currency formatter (avoids Unicode issues)
+const formatPDFCurrency = (amount, currency = 'Rs.') => {
+  const num = parseFloat(amount) || 0;
+  // Use simple currency prefix for PDF compatibility
+  const currencySymbol = currency === '₹' ? 'Rs.' : currency;
+  return `${currencySymbol} ${num.toFixed(2)}`;
+};
 
 export const generateInvoicePDF = (invoice, business, settings = {}) => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 15;
+  const margin = 20;
   const contentWidth = pageWidth - 2 * margin;
-  let y = 15;
+  let y = 20;
   
-  const primaryColor = [49, 151, 149];
-  const textColor = [51, 51, 51];
-  const lightGray = [120, 120, 120];
-  const headerBg = [240, 247, 250];
-  
-  const totals = calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
   const taxLabel = settings.taxLabel || 'Tax';
+  const totals = calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
+  const currency = business.currency || 'Rs.';
   
-  // Header background
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 40, 'F');
-  
-  // Business Name
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
+  // Business Name - Bold Header
+  doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text(business.name || 'Your Business', margin, y + 8);
+  doc.text(business.name || 'Business Name', margin, y);
   
-  // Invoice label
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('INVOICE', pageWidth - margin, y + 5, { align: 'right' });
+  // Invoice Number - Right aligned
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'bold');
-  doc.text(invoice.invoiceNumber, pageWidth - margin, y + 12, { align: 'right' });
+  doc.text('INVOICE', pageWidth - margin, y, { align: 'right' });
   
-  y = 25;
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  if (business.taxId) {
-    doc.text(`${taxLabel} ID: ${business.taxId}`, margin, y + 5);
-  }
-  
-  y = 48;
-  
-  // Business & Invoice Details Box
-  doc.setFillColor(...headerBg);
-  doc.roundedRect(margin, y, contentWidth, 32, 2, 2, 'F');
-  
-  doc.setTextColor(...textColor);
-  doc.setFontSize(8);
-  
-  let leftY = y + 8;
-  if (business.address) {
-    doc.text(business.address, margin + 5, leftY);
-    leftY += 5;
-  }
-  if (business.city || business.state) {
-    doc.text(`${business.city || ''}${business.city && business.state ? ', ' : ''}${business.state || ''} ${business.pincode || ''}`, margin + 5, leftY);
-    leftY += 5;
-  }
-  if (business.phone) doc.text(`Ph: ${business.phone}`, margin + 5, leftY);
-  if (business.email) doc.text(`Email: ${business.email}`, margin + 5, leftY + 5);
-  
-  // Right side - Invoice details
-  const labelX = pageWidth - margin - 55;
-  const valueX = pageWidth - margin - 5;
-  doc.setTextColor(...lightGray);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Date:', labelX, y + 10);
-  doc.text('Due Date:', labelX, y + 18);
-  
-  doc.setTextColor(...textColor);
-  doc.setFont('helvetica', 'bold');
-  doc.text(formatDate(invoice.date), valueX, y + 10, { align: 'right' });
-  doc.text(invoice.dueDate ? formatDate(invoice.dueDate) : '-', valueX, y + 18, { align: 'right' });
-  
-  y = 88;
-  
-  // Bill To section
-  doc.setFillColor(...headerBg);
-  doc.roundedRect(margin, y, contentWidth, 30, 2, 2, 'F');
-  
-  doc.setTextColor(...lightGray);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('BILL TO', margin + 5, y + 6);
-  
-  doc.setTextColor(...textColor);
+  y += 7;
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text(invoice.customerName || 'Customer', margin + 5, y + 13);
-  
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  let customerY = y + 19;
-  if (invoice.customerAddress) {
-    doc.text(invoice.customerAddress.substring(0, 60), margin + 5, customerY);
-    customerY += 5;
+  doc.text(invoice.invoiceNumber, pageWidth - margin, y, { align: 'right' });
+  
+  // Business Details
+  y = 30;
+  doc.setFontSize(9);
+  const businessLines = [];
+  if (business.address) businessLines.push(business.address);
+  if (business.city || business.state) {
+    businessLines.push(`${business.city || ''}${business.city && business.state ? ', ' : ''}${business.state || ''} ${business.pincode || ''}`.trim());
   }
-  if (invoice.customerPhone) doc.text(`Ph: ${invoice.customerPhone}`, margin + 5, customerY);
-  if (invoice.customerEmail) doc.text(`Email: ${invoice.customerEmail}`, margin + 70, customerY);
+  if (business.phone) businessLines.push(`Phone: ${business.phone}`);
+  if (business.email) businessLines.push(`Email: ${business.email}`);
+  if (business.taxId) businessLines.push(`${taxLabel} ID: ${business.taxId}`);
   
-  y = 125;
+  businessLines.forEach((line) => {
+    doc.text(line, margin, y);
+    y += 4;
+  });
   
-  // Items table - calculate proper column widths based on content width
-  const colWidths = {
-    num: 12,
-    qty: 22,
-    price: 32,
-    amount: 35
-  };
-  const descWidth = contentWidth - colWidths.num - colWidths.qty - colWidths.price - colWidths.amount;
+  // Horizontal line
+  y += 5;
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
   
+  // Invoice Details - Two columns
+  doc.setFont('helvetica', 'bold');
+  doc.text('Bill To:', margin, y);
+  doc.text('Invoice Details:', pageWidth / 2 + 10, y);
+  
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  
+  // Customer details (left)
+  const customerY = y;
+  doc.text(invoice.customerName || 'Customer', margin, customerY);
+  let custY = customerY + 4;
+  if (invoice.customerAddress) {
+    const addrLines = doc.splitTextToSize(invoice.customerAddress, contentWidth / 2 - 20);
+    doc.text(addrLines, margin, custY);
+    custY += addrLines.length * 4;
+  }
+  if (invoice.customerPhone) {
+    doc.text(`Phone: ${invoice.customerPhone}`, margin, custY);
+    custY += 4;
+  }
+  if (invoice.customerEmail) {
+    doc.text(`Email: ${invoice.customerEmail}`, margin, custY);
+  }
+  
+  // Invoice details (right)
+  const detailX = pageWidth / 2 + 10;
+  doc.text(`Date: ${formatDate(invoice.date)}`, detailX, customerY);
+  if (invoice.dueDate) {
+    doc.text(`Due Date: ${formatDate(invoice.dueDate)}`, detailX, customerY + 4);
+  }
+  
+  y = Math.max(custY, customerY + 12) + 10;
+  
+  // Items table
   const tableData = invoice.items.map((item, index) => [
-    index + 1,
+    (index + 1).toString(),
     item.name,
-    item.quantity,
-    formatCurrency(item.price, business.currency),
-    formatCurrency(item.quantity * item.price, business.currency),
+    item.quantity.toString(),
+    formatPDFCurrency(item.price, currency),
+    formatPDFCurrency(item.quantity * item.price, currency),
   ]);
   
   doc.autoTable({
     startY: y,
-    head: [['#', 'Item Description', 'Qty', 'Price', 'Amount']],
+    head: [['#', 'Description', 'Qty', 'Rate', 'Amount']],
     body: tableData,
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
     styles: {
       fontSize: 9,
       cellPadding: 4,
-      overflow: 'linebreak',
+      lineColor: [0, 0, 0],
+      lineWidth: 0.1,
+      textColor: [0, 0, 0],
     },
     headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
       fontStyle: 'bold',
-      fontSize: 8,
-      halign: 'center',
+      lineWidth: 0.3,
     },
-    alternateRowStyles: {
-      fillColor: [250, 250, 250],
+    bodyStyles: {
+      fillColor: [255, 255, 255],
     },
     columnStyles: {
-      0: { cellWidth: colWidths.num, halign: 'center' },
-      1: { cellWidth: descWidth, halign: 'left' },
-      2: { cellWidth: colWidths.qty, halign: 'center' },
-      3: { cellWidth: colWidths.price, halign: 'right' },
-      4: { cellWidth: colWidths.amount, halign: 'right' },
+      0: { cellWidth: 12, halign: 'center' },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 20, halign: 'center' },
+      3: { cellWidth: 30, halign: 'right' },
+      4: { cellWidth: 35, halign: 'right' },
     },
   });
   
-  y = doc.lastAutoTable.finalY + 12;
+  y = doc.lastAutoTable.finalY + 10;
   
-  // Totals section - align with the last two columns of the table
-  const totalsWidth = 75;
-  const totalsStartX = pageWidth - margin - totalsWidth;
-  const totalsLabelX = totalsStartX;
-  const totalsValueX = pageWidth - margin;
+  // Totals section - right aligned
+  const totalsX = pageWidth - margin - 80;
+  const valueX = pageWidth - margin;
   
   doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...textColor);
   
-  doc.text('Subtotal:', totalsLabelX, y);
-  doc.text(formatCurrency(totals.subtotal, business.currency), totalsValueX, y, { align: 'right' });
+  // Subtotal
+  doc.text('Subtotal:', totalsX, y);
+  doc.text(formatPDFCurrency(totals.subtotal, currency), valueX, y, { align: 'right' });
   
+  // Discount
   if (invoice.discount > 0) {
-    y += 7;
-    doc.text(`Discount (${invoice.discount}%):`, totalsLabelX, y);
-    doc.setTextColor(220, 38, 38);
-    doc.text(`-${formatCurrency(totals.discountAmount, business.currency)}`, totalsValueX, y, { align: 'right' });
-    doc.setTextColor(...textColor);
+    y += 6;
+    doc.text(`Discount (${invoice.discount}%):`, totalsX, y);
+    doc.text(`-${formatPDFCurrency(totals.discountAmount, currency)}`, valueX, y, { align: 'right' });
   }
   
+  // Tax
   if (invoice.taxRate > 0) {
-    y += 7;
-    doc.text(`${taxLabel} (${invoice.taxRate}%):`, totalsLabelX, y);
-    doc.text(formatCurrency(totals.taxAmount, business.currency), totalsValueX, y, { align: 'right' });
+    y += 6;
+    doc.text(`${taxLabel} (${invoice.taxRate}%):`, totalsX, y);
+    doc.text(formatPDFCurrency(totals.taxAmount, currency), valueX, y, { align: 'right' });
   }
   
-  // Total box - properly aligned
-  y += 10;
-  doc.setFillColor(...primaryColor);
-  doc.roundedRect(totalsStartX - 3, y - 5, totalsWidth + 3, 14, 2, 2, 'F');
+  // Total with line
+  y += 4;
+  doc.setLineWidth(0.3);
+  doc.line(totalsX - 5, y, valueX, y);
   
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
+  y += 6;
   doc.setFont('helvetica', 'bold');
-  doc.text('TOTAL:', totalsLabelX + 2, y + 4);
-  doc.text(formatCurrency(totals.total, business.currency), totalsValueX - 3, y + 4, { align: 'right' });
+  doc.setFontSize(11);
+  doc.text('TOTAL:', totalsX, y);
+  doc.text(formatPDFCurrency(totals.total, currency), valueX, y, { align: 'right' });
   
   // Amount in words
-  y += 20;
-  doc.setTextColor(...lightGray);
-  doc.setFontSize(7);
+  y += 15;
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
   doc.text('Amount in Words:', margin, y);
-  doc.setTextColor(...textColor);
-  doc.setFontSize(8);
+  y += 5;
   doc.setFont('helvetica', 'bold');
-  doc.text(`${numberToWords(Math.floor(totals.total))} Only`, margin, y + 6);
+  doc.text(`${numberToWords(Math.floor(totals.total))} Only`, margin, y);
   
   // Notes
   if (invoice.notes) {
-    y += 18;
-    doc.setTextColor(...lightGray);
-    doc.setFontSize(7);
+    y += 12;
     doc.setFont('helvetica', 'normal');
-    doc.text('NOTES:', margin, y);
-    doc.setTextColor(...textColor);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Notes:', margin, y);
+    y += 5;
     const notesLines = doc.splitTextToSize(invoice.notes, contentWidth);
-    doc.text(notesLines, margin, y + 6);
+    doc.text(notesLines, margin, y);
   }
   
-  // Footer
-  const footerY = doc.internal.pageSize.getHeight() - 15;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(margin, footerY - 8, pageWidth - margin, footerY - 8);
+  // Footer line
+  const footerY = doc.internal.pageSize.getHeight() - 20;
+  doc.setLineWidth(0.3);
+  doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
   
-  doc.setTextColor(...lightGray);
-  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
   doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
   
   return doc;

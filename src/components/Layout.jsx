@@ -111,16 +111,17 @@ function Layout({ children }) {
       {/* Main content */}
       <main className="flex-1 flex flex-col min-h-screen lg:p-4">
         {/* Mobile header */}
-        <header className="lg:hidden flex items-center justify-between p-4 glass">
+        <header className="lg:hidden flex items-center justify-between p-4 glass safe-area-top sticky top-0 z-30">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-              <Receipt className="w-4 h-4 text-white" />
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
+              <Receipt className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display font-bold text-white">InvoiceFlow</span>
+            <span className="font-display font-bold text-white text-lg">InvoiceFlow</span>
           </Link>
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+            className="p-3 -mr-1 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors"
+            aria-label="Toggle menu"
           >
             {sidebarOpen ? (
               <X className="w-6 h-6 text-white" />
@@ -131,8 +132,8 @@ function Layout({ children }) {
         </header>
 
         {/* Page content */}
-        <div className="flex-1 p-4 lg:p-0">
-          <div className="glass rounded-2xl min-h-full p-6 lg:p-8 animate-fade-in">
+        <div className="flex-1 p-3 sm:p-4 lg:p-0 safe-area-bottom">
+          <div className="glass rounded-2xl min-h-full p-4 sm:p-6 lg:p-8 animate-fade-in">
             {children}
           </div>
         </div>
