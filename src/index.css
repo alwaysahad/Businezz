@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #0a1929;
+  --bg-secondary: #102a43;
+  --bg-card: #162d45;
+  --text-primary: #f0f4f8;
+  --text-secondary: #9fb3c8;
+  --accent-primary: #319795;
+  --accent-secondary: #fbbf24;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  min-height: 100vh;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(49, 151, 149, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(49, 151, 149, 0.7);
+}
+
+/* Input styling */
+input, select, textarea {
+  font-family: inherit;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+}
+
+/* Print styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  .print-only {
+    display: block !important;
+  }
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Glass effect */
+.glass {
+  background: rgba(22, 45, 69, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #319795 0%, #4fd1c5 50%, #fbbf24 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(49, 151, 149, 0.15);
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-teal-600 hover:bg-teal-500 text-white font-medium py-2.5 px-5 rounded-xl transition-all duration-200 shadow-lg hover:shadow-glow;
+}
+
+.btn-secondary {
+  @apply bg-midnight-700 hover:bg-midnight-600 text-white font-medium py-2.5 px-5 rounded-xl transition-all duration-200 border border-midnight-500;
+}
+
+.btn-danger {
+  @apply bg-coral-600 hover:bg-coral-500 text-white font-medium py-2.5 px-5 rounded-xl transition-all duration-200;
+}
+
+/* Input styles */
+.input-field {
+  @apply w-full bg-midnight-800 border border-midnight-600 rounded-xl px-4 py-3 text-white placeholder-midnight-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all duration-200;
+}
+
+.input-label {
+  @apply block text-sm font-medium text-midnight-300 mb-2;
+}
