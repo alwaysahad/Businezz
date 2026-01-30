@@ -1,9 +1,12 @@
 // ============================================
-// STORAGE UTILITIES
-// This file exports both sync (localStorage) and async (database) methods
+// STORAGE UTILITIES - Local + Cloud Sync
 // ============================================
 
-import { invoiceDB, customerDB, productDB, businessDB, settingsDB, isSupabaseConfigured } from '../lib/database';
+import type { Invoice, Customer, Product, Business, Settings } from '../types';
+import { isSupabaseConfigured, syncToCloud, syncFromCloud } from '../lib/database';
+
+// Re-export for convenience
+export { isSupabaseConfigured };
 
 // Local Storage Keys
 const STORAGE_KEYS = {
@@ -12,11 +15,11 @@ const STORAGE_KEYS = {
   SETTINGS: 'invoiceflow_settings',
   CUSTOMERS: 'invoiceflow_customers',
   PRODUCTS: 'invoiceflow_products',
-};
+} as const;
 
 // Generic storage helpers
 export const storage = {
-  get: (key) => {
+  get: <T>(key: string): T | null => {
     try {
       const item = localStorage.getItem(key);
       return item ? JSON.parse(item) : null;
@@ -26,7 +29,7 @@ export const storage = {
     }
   },
   
-  set: (key, value) => {
+  set: <T>(key: string, value: T): boolean => {
     try {
       localStorage.setItem(key, JSON.stringify(value));
       return true;
@@ -36,7 +39,7 @@ export const storage = {
     }
   },
   
-  remove: (key) => {
+  remove: (key: string): boolean => {
     try {
       localStorage.removeItem(key);
       return true;
@@ -51,14 +54,14 @@ export const storage = {
 // INVOICE STORAGE
 // ============================================
 export const invoiceStorage = {
-  getAll: () => storage.get(STORAGE_KEYS.INVOICES) || [],
+  getAll: (): Invoice[] => storage.get<Invoice[]>(STORAGE_KEYS.INVOICES) || [],
   
-  getById: (id) => {
+  getById: (id: string): Invoice | null => {
     const invoices = invoiceStorage.getAll();
     return invoices.find(inv => inv.id === id) || null;
   },
   
-  save: (invoice) => {
+  save: (invoice: Invoice): boolean => {
     const invoices = invoiceStorage.getAll();
     const existingIndex = invoices.findIndex(inv => inv.id === invoice.id);
     
@@ -73,27 +76,15 @@ export const invoiceStorage = {
       });
     }
     
-    const result = storage.set(STORAGE_KEYS.INVOICES, invoices);
-    
-    if (isSupabaseConfigured) {
-      invoiceDB.save(invoice).catch(console.error);
-    }
-    
-    return result;
+    return storage.set(STORAGE_KEYS.INVOICES, invoices);
   },
   
-  delete: (id) => {
+  delete: (id: string): boolean => {
     const invoices = invoiceStorage.getAll().filter(inv => inv.id !== id);
-    const result = storage.set(STORAGE_KEYS.INVOICES, invoices);
-    
-    if (isSupabaseConfigured) {
-      invoiceDB.delete(id).catch(console.error);
-    }
-    
-    return result;
+    return storage.set(STORAGE_KEYS.INVOICES, invoices);
   },
   
-  getNextInvoiceNumber: () => {
+  getNextInvoiceNumber: (): string => {
     const settings = settingsStorage.get();
     const prefix = settings.invoicePrefix || 'INV';
     const invoices = invoiceStorage.getAll();
@@ -104,15 +95,13 @@ export const invoiceStorage = {
     const nextNum = yearInvoices.length + 1;
     return `${prefix}-${currentYear}-${String(nextNum).padStart(4, '0')}`;
   },
-  
-  fetchAll: () => invoiceDB.getAll(),
 };
 
 // ============================================
 // BUSINESS PROFILE STORAGE
 // ============================================
 export const businessStorage = {
-  get: () => storage.get(STORAGE_KEYS.BUSINESS) || {
+  get: (): Business => storage.get<Business>(STORAGE_KEYS.BUSINESS) || {
     name: '',
     address: '',
     city: '',
@@ -126,26 +115,18 @@ export const businessStorage = {
     taxRate: 18,
   },
   
-  save: (business) => {
-    const result = storage.set(STORAGE_KEYS.BUSINESS, business);
-    
-    if (isSupabaseConfigured) {
-      businessDB.save(business).catch(console.error);
-    }
-    
-    return result;
+  save: (business: Business): boolean => {
+    return storage.set(STORAGE_KEYS.BUSINESS, business);
   },
-  
-  fetch: () => businessDB.get(),
 };
 
 // ============================================
 // CUSTOMER STORAGE
 // ============================================
 export const customerStorage = {
-  getAll: () => storage.get(STORAGE_KEYS.CUSTOMERS) || [],
+  getAll: (): Customer[] => storage.get<Customer[]>(STORAGE_KEYS.CUSTOMERS) || [],
   
-  save: (customer) => {
+  save: (customer: Customer): boolean => {
     const customers = customerStorage.getAll();
     const existingIndex = customers.findIndex(c => c.id === customer.id);
     
@@ -155,36 +136,22 @@ export const customerStorage = {
       customers.push(customer);
     }
     
-    const result = storage.set(STORAGE_KEYS.CUSTOMERS, customers);
-    
-    if (isSupabaseConfigured) {
-      customerDB.save(customer).catch(console.error);
-    }
-    
-    return result;
+    return storage.set(STORAGE_KEYS.CUSTOMERS, customers);
   },
   
-  delete: (id) => {
+  delete: (id: string): boolean => {
     const customers = customerStorage.getAll().filter(c => c.id !== id);
-    const result = storage.set(STORAGE_KEYS.CUSTOMERS, customers);
-    
-    if (isSupabaseConfigured) {
-      customerDB.delete(id).catch(console.error);
-    }
-    
-    return result;
+    return storage.set(STORAGE_KEYS.CUSTOMERS, customers);
   },
-  
-  fetchAll: () => customerDB.getAll(),
 };
 
 // ============================================
 // PRODUCT STORAGE
 // ============================================
 export const productStorage = {
-  getAll: () => storage.get(STORAGE_KEYS.PRODUCTS) || [],
+  getAll: (): Product[] => storage.get<Product[]>(STORAGE_KEYS.PRODUCTS) || [],
   
-  save: (product) => {
+  save: (product: Product): boolean => {
     const products = productStorage.getAll();
     const existingIndex = products.findIndex(p => p.id === product.id);
     
@@ -194,34 +161,20 @@ export const productStorage = {
       products.push(product);
     }
     
-    const result = storage.set(STORAGE_KEYS.PRODUCTS, products);
-    
-    if (isSupabaseConfigured) {
-      productDB.save(product).catch(console.error);
-    }
-    
-    return result;
+    return storage.set(STORAGE_KEYS.PRODUCTS, products);
   },
   
-  delete: (id) => {
+  delete: (id: string): boolean => {
     const products = productStorage.getAll().filter(p => p.id !== id);
-    const result = storage.set(STORAGE_KEYS.PRODUCTS, products);
-    
-    if (isSupabaseConfigured) {
-      productDB.delete(id).catch(console.error);
-    }
-    
-    return result;
+    return storage.set(STORAGE_KEYS.PRODUCTS, products);
   },
-  
-  fetchAll: () => productDB.getAll(),
 };
 
 // ============================================
 // SETTINGS STORAGE
 // ============================================
 export const settingsStorage = {
-  get: () => storage.get(STORAGE_KEYS.SETTINGS) || {
+  get: (): Settings => storage.get<Settings>(STORAGE_KEYS.SETTINGS) || {
     currency: '₹',
     taxRate: 18,
     invoicePrefix: 'INV',
@@ -230,50 +183,7 @@ export const settingsStorage = {
     taxLabel: 'GST',
   },
   
-  save: (settings) => {
-    const result = storage.set(STORAGE_KEYS.SETTINGS, settings);
-    
-    if (isSupabaseConfigured) {
-      settingsDB.save(settings).catch(console.error);
-    }
-    
-    return result;
+  save: (settings: Settings): boolean => {
+    return storage.set(STORAGE_KEYS.SETTINGS, settings);
   },
-  
-  fetch: () => settingsDB.get(),
 };
-
-// ============================================
-// DATA SYNC UTILITIES
-// ============================================
-export const syncData = {
-  async pullFromCloud() {
-    if (!isSupabaseConfigured) return;
-    
-    try {
-      const [invoices, customers, products, business, settings] = await Promise.all([
-        invoiceStorage.fetchAll(),
-        customerStorage.fetchAll(),
-        productStorage.fetchAll(),
-        businessStorage.fetch(),
-        settingsStorage.fetch(),
-      ]);
-      
-      if (invoices.length) storage.set(STORAGE_KEYS.INVOICES, invoices);
-      if (customers.length) storage.set(STORAGE_KEYS.CUSTOMERS, customers);
-      if (products.length) storage.set(STORAGE_KEYS.PRODUCTS, products);
-      if (business) storage.set(STORAGE_KEYS.BUSINESS, business);
-      if (settings) storage.set(STORAGE_KEYS.SETTINGS, settings);
-      
-      console.log('Data synced from cloud');
-      return true;
-    } catch (error) {
-      console.error('Failed to sync from cloud:', error);
-      return false;
-    }
-  },
-  
-  isCloudEnabled: () => isSupabaseConfigured,
-};
-
-export { isSupabaseConfigured };

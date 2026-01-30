@@ -7,36 +7,43 @@ import {
   Printer,
   Share2,
   Check,
-  MessageCircle,
-  Mail,
-  Copy,
   CheckCircle,
   Clock,
   AlertCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { invoiceStorage, businessStorage, settingsStorage } from '../utils/storage';
-import { formatCurrency, formatDate, calculateInvoiceTotals, numberToWords, getStatusColor, getStatusLabel, generateWhatsAppLink } from '../utils/helpers';
-import { downloadInvoicePDF, openInvoicePDFInNewTab } from '../utils/pdfGenerator';
+import { formatCurrency, formatDate, calculateInvoiceTotals, numberToWords, getStatusColor, getStatusLabel } from '../utils/helpers';
+import { downloadInvoicePDF, openInvoicePDFInNewTab, getInvoicePDFBlob } from '../utils/pdfGenerator';
+import type { Invoice, InvoiceStatus } from '../types';
+
+interface StatusOption {
+  value: InvoiceStatus;
+  label: string;
+  icon: LucideIcon;
+  color: string;
+}
 
 function ViewInvoice() {
   const navigate = useNavigate();
-  const { id } = useParams();
-  const printRef = useRef();
+  const { id } = useParams<{ id: string }>();
+  const printRef = useRef<HTMLDivElement>(null);
 
-  const [invoice, setInvoice] = useState(null);
-  const [showShareMenu, setShowShareMenu] = useState(false);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const business = businessStorage.get();
   const settings = settingsStorage.get();
 
   useEffect(() => {
-    const inv = invoiceStorage.getById(id);
-    if (inv) {
-      setInvoice(inv);
-    } else {
-      navigate('/invoices');
+    if (id) {
+      const inv = invoiceStorage.getById(id);
+      if (inv) {
+        setInvoice(inv);
+      } else {
+        navigate('/invoices');
+      }
     }
   }, [id, navigate]);
 
@@ -50,50 +57,49 @@ function ViewInvoice() {
 
   const totals = calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
 
-  const handleDownloadPDF = () => {
+  const handleDownloadPDF = (): void => {
     downloadInvoicePDF(invoice, business, settings);
   };
 
-  const handlePrint = () => {
+  const handlePrint = (): void => {
     openInvoicePDFInNewTab(invoice, business, settings);
   };
 
-  const handleStatusChange = (newStatus) => {
-    const updatedInvoice = { ...invoice, status: newStatus };
+  const handleStatusChange = (newStatus: InvoiceStatus): void => {
+    const updatedInvoice: Invoice = { ...invoice, status: newStatus };
     invoiceStorage.save(updatedInvoice);
     setInvoice(updatedInvoice);
     setShowStatusMenu(false);
   };
 
-  const generateShareMessage = () => {
-    return `Invoice ${invoice.invoiceNumber}\n\nHi ${invoice.customerName},\n\nPlease find your invoice details:\n\nInvoice No: ${invoice.invoiceNumber}\nDate: ${formatDate(invoice.date)}\nAmount: ${formatCurrency(totals.total, business.currency)}\n\nThank you for your business!\n\n- ${business.name || 'Your Business'}`;
-  };
-
-  const handleWhatsAppShare = () => {
-    if (invoice.customerPhone) {
-      const message = generateShareMessage();
-      const link = generateWhatsAppLink(invoice.customerPhone, message);
-      window.open(link, '_blank');
+  const handleSharePDF = async (): Promise<void> => {
+    setSharing(true);
+    try {
+      const pdfBlob = getInvoicePDFBlob(invoice, business, settings);
+      const pdfFile = new File([pdfBlob], `${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' });
+      
+      if (navigator.share && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          title: `Invoice ${invoice.invoiceNumber}`,
+          text: `Invoice for ${invoice.customerName} - ${formatCurrency(totals.total, business.currency)}`,
+          files: [pdfFile],
+        });
+      } else {
+        // Fallback: download the PDF if sharing is not supported
+        downloadInvoicePDF(invoice, business, settings);
+      }
+    } catch (error) {
+      // User cancelled or error occurred
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Error sharing:', error);
+        // Fallback to download
+        downloadInvoicePDF(invoice, business, settings);
+      }
     }
-    setShowShareMenu(false);
+    setSharing(false);
   };
 
-  const handleEmailShare = () => {
-    const subject = `Invoice ${invoice.invoiceNumber} from ${business.name || 'Your Business'}`;
-    const body = generateShareMessage();
-    window.location.href = `mailto:${invoice.customerEmail || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setShowShareMenu(false);
-  };
-
-  const handleCopyLink = () => {
-    const text = generateShareMessage();
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    setShowShareMenu(false);
-  };
-
-  const statusOptions = [
+  const statusOptions: StatusOption[] = [
     { value: 'draft', label: 'Draft', icon: Edit, color: 'text-midnight-400' },
     { value: 'pending', label: 'Pending', icon: Clock, color: 'text-gold-400' },
     { value: 'paid', label: 'Paid', icon: CheckCircle, color: 'text-teal-400' },
@@ -168,42 +174,14 @@ function ViewInvoice() {
             <Printer className="w-4 h-4" />
             <span className="hidden xs:inline">Print</span>
           </button>
-          <div className="relative flex-1 sm:flex-none">
-            <button onClick={() => setShowShareMenu(!showShareMenu)} className="btn-primary flex items-center justify-center gap-2 w-full">
-              <Share2 className="w-4 h-4" />
-              Share
-            </button>
-            {showShareMenu && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowShareMenu(false)} />
-                <div className="absolute right-0 top-full mt-2 w-56 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden z-20">
-                  {invoice.customerPhone && (
-                    <button onClick={handleWhatsAppShare} className="flex items-center gap-3 px-4 py-3 w-full text-white hover:bg-midnight-700 transition-colors">
-                      <MessageCircle className="w-5 h-5 text-green-400" />
-                      Share via WhatsApp
-                    </button>
-                  )}
-                  <button onClick={handleEmailShare} className="flex items-center gap-3 px-4 py-3 w-full text-white hover:bg-midnight-700 transition-colors">
-                    <Mail className="w-5 h-5 text-blue-400" />
-                    Share via Email
-                  </button>
-                  <button onClick={handleCopyLink} className="flex items-center gap-3 px-4 py-3 w-full text-white hover:bg-midnight-700 transition-colors">
-                    {copied ? (
-                      <>
-                        <Check className="w-5 h-5 text-teal-400" />
-                        Copied!
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-5 h-5 text-midnight-400" />
-                        Copy Invoice Details
-                      </>
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <button 
+            onClick={handleSharePDF} 
+            disabled={sharing}
+            className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none disabled:opacity-50"
+          >
+            <Share2 className={`w-4 h-4 ${sharing ? 'animate-pulse' : ''}`} />
+            {sharing ? 'Sharing...' : 'Share PDF'}
+          </button>
         </div>
       </div>
 
@@ -224,7 +202,6 @@ function ViewInvoice() {
               <p className="text-teal-200 text-sm uppercase tracking-wide">Invoice</p>
               <p className="text-xl font-mono font-bold mt-1">{invoice.invoiceNumber}</p>
               <p className="text-teal-100 text-sm mt-2">Date: {formatDate(invoice.date)}</p>
-              {invoice.dueDate && <p className="text-teal-100 text-sm">Due: {formatDate(invoice.dueDate)}</p>}
             </div>
           </div>
         </div>
@@ -301,7 +278,7 @@ function ViewInvoice() {
         {/* Notes */}
         {invoice.notes && (
           <div className="px-8 py-6 border-t border-gray-100">
-            <p className="text-gray-400 text-xs uppercase tracking-wide mb-2">Notes / Payment Terms</p>
+            <p className="text-gray-400 text-xs uppercase tracking-wide mb-2">Notes</p>
             <p className="text-gray-600 whitespace-pre-line">{invoice.notes}</p>
           </div>
         )}

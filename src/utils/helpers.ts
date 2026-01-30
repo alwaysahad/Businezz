@@ -1,11 +1,13 @@
+import type { InvoiceItem, InvoiceTotals, InvoiceStatus, DateFormat } from '../types';
+
 // Generate unique ID
-export const generateId = () => {
+export const generateId = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
 // Format currency
-export const formatCurrency = (amount, currency = '₹') => {
-  const num = parseFloat(amount) || 0;
+export const formatCurrency = (amount: number | string, currency: string = '₹'): string => {
+  const num = parseFloat(String(amount)) || 0;
   return `${currency}${num.toLocaleString('en-IN', { 
     minimumFractionDigits: 2, 
     maximumFractionDigits: 2 
@@ -13,7 +15,7 @@ export const formatCurrency = (amount, currency = '₹') => {
 };
 
 // Format date
-export const formatDate = (date, format = 'short') => {
+export const formatDate = (date: string | Date | null | undefined, format: DateFormat = 'short'): string => {
   if (!date) return '';
   const d = new Date(date);
   
@@ -42,14 +44,18 @@ export const formatDate = (date, format = 'short') => {
 };
 
 // Calculate invoice totals
-export const calculateInvoiceTotals = (items, taxRate = 0, discount = 0) => {
+export const calculateInvoiceTotals = (
+  items: InvoiceItem[], 
+  taxRate: number = 0, 
+  discount: number = 0
+): InvoiceTotals => {
   const subtotal = items.reduce((sum, item) => {
-    return sum + (parseFloat(item.quantity) || 0) * (parseFloat(item.price) || 0);
+    return sum + (parseFloat(String(item.quantity)) || 0) * (parseFloat(String(item.price)) || 0);
   }, 0);
   
-  const discountAmount = (subtotal * (parseFloat(discount) || 0)) / 100;
+  const discountAmount = (subtotal * (parseFloat(String(discount)) || 0)) / 100;
   const taxableAmount = subtotal - discountAmount;
-  const taxAmount = (taxableAmount * (parseFloat(taxRate) || 0)) / 100;
+  const taxAmount = (taxableAmount * (parseFloat(String(taxRate)) || 0)) / 100;
   const total = taxableAmount + taxAmount;
   
   return {
@@ -62,8 +68,8 @@ export const calculateInvoiceTotals = (items, taxRate = 0, discount = 0) => {
 };
 
 // Get invoice status color
-export const getStatusColor = (status) => {
-  const colors = {
+export const getStatusColor = (status: InvoiceStatus): string => {
+  const colors: Record<InvoiceStatus, string> = {
     draft: 'bg-midnight-600 text-midnight-200',
     pending: 'bg-gold-500/20 text-gold-400',
     paid: 'bg-teal-500/20 text-teal-400',
@@ -74,8 +80,8 @@ export const getStatusColor = (status) => {
 };
 
 // Get invoice status label
-export const getStatusLabel = (status) => {
-  const labels = {
+export const getStatusLabel = (status: InvoiceStatus): string => {
+  const labels: Record<InvoiceStatus, string> = {
     draft: 'Draft',
     pending: 'Pending',
     paid: 'Paid',
@@ -86,47 +92,34 @@ export const getStatusLabel = (status) => {
 };
 
 // Validate email
-export const isValidEmail = (email) => {
+export const isValidEmail = (email: string): boolean => {
   const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return re.test(email);
 };
 
 // Validate phone number
-export const isValidPhone = (phone) => {
+export const isValidPhone = (phone: string): boolean => {
   const re = /^[0-9]{10,15}$/;
   return re.test(phone.replace(/\s/g, ''));
 };
 
-// Format phone number for WhatsApp
-export const formatPhoneForWhatsApp = (phone) => {
-  const cleaned = phone.replace(/\D/g, '');
-  if (cleaned.length === 10) {
-    return `91${cleaned}`;
-  }
-  return cleaned;
-};
-
-// Generate WhatsApp share link
-export const generateWhatsAppLink = (phone, message) => {
-  const formattedPhone = formatPhoneForWhatsApp(phone);
-  const encodedMessage = encodeURIComponent(message);
-  return `https://wa.me/${formattedPhone}?text=${encodedMessage}`;
-};
-
 // Debounce function
-export const debounce = (func, wait) => {
-  let timeout;
-  return (...args) => {
+export const debounce = <T extends (...args: unknown[]) => unknown>(
+  func: T, 
+  wait: number
+): ((...args: Parameters<T>) => void) => {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
 };
 
 // Get relative time
-export const getRelativeTime = (date) => {
+export const getRelativeTime = (date: string | Date): string => {
   const now = new Date();
   const past = new Date(date);
-  const diffMs = now - past;
+  const diffMs = now.getTime() - past.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
   const diffMins = Math.floor(diffSecs / 60);
   const diffHours = Math.floor(diffMins / 60);
@@ -154,7 +147,7 @@ export const getRelativeTime = (date) => {
 };
 
 // Number to words
-export const numberToWords = (num) => {
+export const numberToWords = (num: number): string => {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];

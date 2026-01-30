@@ -1,16 +1,59 @@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { formatDate, numberToWords, calculateInvoiceTotals } from './helpers';
+import type { Invoice, Business, Settings } from '../types';
+
+// Extend jsPDF type to include autoTable
+declare module 'jspdf' {
+  interface jsPDF {
+    autoTable: (options: AutoTableOptions) => jsPDF;
+    lastAutoTable: { finalY: number };
+  }
+}
+
+interface AutoTableOptions {
+  startY?: number;
+  head?: string[][];
+  body?: string[][];
+  margin?: { left?: number; right?: number; top?: number; bottom?: number };
+  tableWidth?: number | 'auto';
+  styles?: {
+    fontSize?: number;
+    cellPadding?: number;
+    lineColor?: number[];
+    lineWidth?: number;
+    textColor?: number[];
+  };
+  headStyles?: {
+    fillColor?: number[];
+    textColor?: number[];
+    fontStyle?: string;
+    lineWidth?: number;
+  };
+  bodyStyles?: {
+    fillColor?: number[];
+  };
+  columnStyles?: {
+    [key: number]: {
+      cellWidth?: number | 'auto';
+      halign?: 'left' | 'center' | 'right';
+    };
+  };
+}
 
 // PDF-safe currency formatter (avoids Unicode issues)
-const formatPDFCurrency = (amount, currency = 'Rs.') => {
-  const num = parseFloat(amount) || 0;
+const formatPDFCurrency = (amount: number | string, currency: string = 'Rs.'): string => {
+  const num = parseFloat(String(amount)) || 0;
   // Use simple currency prefix for PDF compatibility
   const currencySymbol = currency === '₹' ? 'Rs.' : currency;
   return `${currencySymbol} ${num.toFixed(2)}`;
 };
 
-export const generateInvoicePDF = (invoice, business, settings = {}) => {
+export const generateInvoicePDF = (
+  invoice: Invoice, 
+  business: Business, 
+  settings: Partial<Settings> = {}
+): jsPDF => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
@@ -38,7 +81,7 @@ export const generateInvoicePDF = (invoice, business, settings = {}) => {
   // Business Details
   y = 30;
   doc.setFontSize(9);
-  const businessLines = [];
+  const businessLines: string[] = [];
   if (business.address) businessLines.push(business.address);
   if (business.city || business.state) {
     businessLines.push(`${business.city || ''}${business.city && business.state ? ', ' : ''}${business.state || ''} ${business.pincode || ''}`.trim());
@@ -86,9 +129,6 @@ export const generateInvoicePDF = (invoice, business, settings = {}) => {
   // Invoice details (right)
   const detailX = pageWidth / 2 + 10;
   doc.text(`Date: ${formatDate(invoice.date)}`, detailX, customerY);
-  if (invoice.dueDate) {
-    doc.text(`Due Date: ${formatDate(invoice.dueDate)}`, detailX, customerY + 4);
-  }
   
   y = Math.max(custY, customerY + 12) + 10;
   
@@ -201,17 +241,29 @@ export const generateInvoicePDF = (invoice, business, settings = {}) => {
   return doc;
 };
 
-export const downloadInvoicePDF = (invoice, business, settings) => {
+export const downloadInvoicePDF = (
+  invoice: Invoice, 
+  business: Business, 
+  settings: Partial<Settings>
+): void => {
   const doc = generateInvoicePDF(invoice, business, settings);
   doc.save(`${invoice.invoiceNumber}.pdf`);
 };
 
-export const getInvoicePDFBlob = (invoice, business, settings) => {
+export const getInvoicePDFBlob = (
+  invoice: Invoice, 
+  business: Business, 
+  settings: Partial<Settings>
+): Blob => {
   const doc = generateInvoicePDF(invoice, business, settings);
   return doc.output('blob');
 };
 
-export const openInvoicePDFInNewTab = (invoice, business, settings) => {
+export const openInvoicePDFInNewTab = (
+  invoice: Invoice, 
+  business: Business, 
+  settings: Partial<Settings>
+): void => {
   const doc = generateInvoicePDF(invoice, business, settings);
   const pdfBlob = doc.output('blob');
   const pdfUrl = URL.createObjectURL(pdfBlob);

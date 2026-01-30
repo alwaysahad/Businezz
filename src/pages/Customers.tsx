@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -15,23 +15,24 @@ import {
 } from 'lucide-react';
 import { customerStorage, invoiceStorage } from '../utils/storage';
 import { generateId } from '../utils/helpers';
+import type { Customer, CustomerFormData, FormErrors, Invoice } from '../types';
 
 function Customers() {
-  const [customers, setCustomers] = useState(() => customerStorage.getAll());
-  const invoices = invoiceStorage.getAll();
+  const [customers, setCustomers] = useState<Customer[]>(() => customerStorage.getAll());
+  const invoices: Invoice[] = invoiceStorage.getAll();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [formData, setFormData] = useState({
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [formData, setFormData] = useState<CustomerFormData>({
     name: '',
     phone: '',
     email: '',
     address: '',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  const getCustomerInvoiceCount = (customerName) => {
+  const getCustomerInvoiceCount = (customerName: string): number => {
     return invoices.filter((inv) => inv.customerName === customerName).length;
   };
 
@@ -42,7 +43,7 @@ function Customers() {
       c.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const openModal = (customer = null) => {
+  const openModal = (customer: Customer | null = null): void => {
     if (customer) {
       setEditingCustomer(customer);
       setFormData({
@@ -59,14 +60,14 @@ function Customers() {
     setShowModal(true);
   };
 
-  const closeModal = () => {
+  const closeModal = (): void => {
     setShowModal(false);
     setEditingCustomer(null);
     setFormData({ name: '', phone: '', email: '', address: '' });
     setErrors({});
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
@@ -74,8 +75,8 @@ function Customers() {
     }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
     if (!formData.name.trim()) {
       newErrors.name = 'Customer name is required';
     }
@@ -83,10 +84,10 @@ function Customers() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = (): void => {
     if (!validateForm()) return;
 
-    const customerData = {
+    const customerData: Customer = {
       id: editingCustomer?.id || generateId(),
       name: formData.name.trim(),
       phone: formData.phone.trim(),
@@ -99,7 +100,7 @@ function Customers() {
     closeModal();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: string): void => {
     customerStorage.delete(id);
     setCustomers(customerStorage.getAll());
     setDeleteConfirm(null);

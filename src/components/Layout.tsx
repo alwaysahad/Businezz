@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -10,9 +10,16 @@ import {
   X,
   Plus,
   Receipt,
+  type LucideIcon,
 } from 'lucide-react';
 
-const navItems = [
+interface NavItem {
+  path: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const navItems: NavItem[] = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/invoices', label: 'Invoices', icon: FileText },
   { path: '/products', label: 'Products', icon: Package },
@@ -20,11 +27,15 @@ const navItems = [
   { path: '/settings', label: 'Settings', icon: Settings },
 ];
 
-function Layout({ children }) {
+interface LayoutProps {
+  children: ReactNode;
+}
+
+function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
 
-  const isActive = (path) => {
+  const isActive = (path: string): boolean => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
   };

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Plus,
@@ -10,22 +10,28 @@ import {
 } from 'lucide-react';
 import { invoiceStorage, businessStorage, customerStorage, productStorage, settingsStorage } from '../utils/storage';
 import { generateId, formatCurrency, formatDate, calculateInvoiceTotals } from '../utils/helpers';
+import type { Invoice, InvoiceItem, Customer, Product, FormErrors } from '../types';
 
 function CreateInvoice() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
 
   const business = businessStorage.get();
   const settings = settingsStorage.get();
-  const customers = customerStorage.getAll();
-  const products = productStorage.getAll();
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
 
-  const [invoice, setInvoice] = useState({
+  // Load customers and products on mount
+  useEffect(() => {
+    setCustomers(customerStorage.getAll());
+    setProducts(productStorage.getAll());
+  }, []);
+
+  const [invoice, setInvoice] = useState<Invoice>({
     id: generateId(),
     invoiceNumber: invoiceStorage.getNextInvoiceNumber(),
     date: formatDate(new Date(), 'input'),
-    dueDate: formatDate(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 'input'),
     customerName: '',
     customerEmail: '',
     customerPhone: '',
@@ -38,19 +44,18 @@ function CreateInvoice() {
   });
 
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
-  const [showProductDropdown, setShowProductDropdown] = useState(null);
+  const [showProductDropdown, setShowProductDropdown] = useState<string | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
-    if (isEditing) {
+    if (isEditing && id) {
       const existingInvoice = invoiceStorage.getById(id);
       if (existingInvoice) {
         setInvoice({
           ...existingInvoice,
           date: formatDate(existingInvoice.date, 'input'),
-          dueDate: existingInvoice.dueDate ? formatDate(existingInvoice.dueDate, 'input') : '',
         });
       } else {
         navigate('/invoices');
@@ -62,7 +67,7 @@ function CreateInvoice() {
     return calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
   }, [invoice.items, invoice.taxRate, invoice.discount]);
 
-  const filteredCustomers = useMemo(() => {
+  const filteredCustomers = useMemo((): Customer[] => {
     if (!customerSearch) return customers.slice(0, 5);
     return customers.filter(c =>
       c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
@@ -70,14 +75,14 @@ function CreateInvoice() {
     ).slice(0, 5);
   }, [customers, customerSearch]);
 
-  const filteredProducts = useMemo(() => {
+  const filteredProducts = useMemo((): Product[] => {
     if (!productSearch) return products.slice(0, 5);
     return products.filter(p =>
       p.name.toLowerCase().includes(productSearch.toLowerCase())
     ).slice(0, 5);
   }, [products, productSearch]);
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
     setInvoice(prev => ({ ...prev, [name]: value }));
     if (errors[name]) {
@@ -85,7 +90,7 @@ function CreateInvoice() {
     }
   };
 
-  const handleItemChange = (itemId, field, value) => {
+  const handleItemChange = (itemId: string, field: keyof InvoiceItem, value: string | number): void => {
     setInvoice(prev => ({
       ...prev,
       items: prev.items.map(item =>
@@ -94,14 +99,14 @@ function CreateInvoice() {
     }));
   };
 
-  const addItem = () => {
+  const addItem = (): void => {
     setInvoice(prev => ({
       ...prev,
       items: [...prev.items, { id: generateId(), name: '', quantity: 1, price: 0 }],
     }));
   };
 
-  const removeItem = (itemId) => {
+  const removeItem = (itemId: string): void => {
     if (invoice.items.length > 1) {
       setInvoice(prev => ({
         ...prev,
@@ -110,7 +115,7 @@ function CreateInvoice() {
     }
   };
 
-  const selectCustomer = (customer) => {
+  const selectCustomer = (customer: Customer): void => {
     setInvoice(prev => ({
       ...prev,
       customerName: customer.name,
@@ -122,7 +127,7 @@ function CreateInvoice() {
     setCustomerSearch('');
   };
 
-  const selectProduct = (product, itemId) => {
+  const selectProduct = (product: Product, itemId: string): void => {
     setInvoice(prev => ({
       ...prev,
       items: prev.items.map(item =>
@@ -135,8 +140,8 @@ function CreateInvoice() {
     setProductSearch('');
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
     if (!invoice.customerName.trim()) {
       newErrors.customerName = 'Customer name is required';
     }
@@ -150,14 +155,13 @@ function CreateInvoice() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (status = 'draft') => {
+  const handleSave = (status: 'draft' | 'pending' = 'draft'): void => {
     if (!validateForm()) return;
 
-    const invoiceToSave = {
+    const invoiceToSave: Invoice = {
       ...invoice,
       status,
       date: new Date(invoice.date).toISOString(),
-      dueDate: invoice.dueDate ? new Date(invoice.dueDate).toISOString() : null,
     };
 
     invoiceStorage.save(invoiceToSave);
@@ -239,21 +243,27 @@ function CreateInvoice() {
                     placeholder="Enter customer name"
                   />
                   {showCustomerDropdown && filteredCustomers.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">
-                      {filteredCustomers.map((customer) => (
-                        <button
-                          key={customer.id}
-                          type="button"
-                          onClick={() => selectCustomer(customer)}
-                          className="w-full px-4 py-3 text-left hover:bg-midnight-700 transition-colors"
-                        >
-                          <p className="text-white font-medium">{customer.name}</p>
-                          {customer.phone && (
-                            <p className="text-midnight-400 text-sm">{customer.phone}</p>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                    <>
+                      <div 
+                        className="fixed inset-0 z-10" 
+                        onClick={() => setShowCustomerDropdown(false)}
+                      />
+                      <div className="absolute z-20 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">
+                        {filteredCustomers.map((customer) => (
+                          <button
+                            key={customer.id}
+                            type="button"
+                            onClick={() => selectCustomer(customer)}
+                            className="w-full px-4 py-3 text-left hover:bg-midnight-700 transition-colors"
+                          >
+                            <p className="text-white font-medium">{customer.name}</p>
+                            {customer.phone && (
+                              <p className="text-midnight-400 text-sm">{customer.phone}</p>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
                 {errors.customerName && (
@@ -353,21 +363,27 @@ function CreateInvoice() {
                       placeholder="Enter item name"
                     />
                     {showProductDropdown === item.id && filteredProducts.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">
-                        {filteredProducts.map((product) => (
-                          <button
-                            key={product.id}
-                            type="button"
-                            onClick={() => selectProduct(product, item.id)}
-                            className="w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors flex justify-between items-center"
-                          >
-                            <span className="text-white text-sm">{product.name}</span>
-                            <span className="text-teal-400 font-mono text-sm">
-                              {formatCurrency(product.price, business.currency)}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
+                      <>
+                        <div 
+                          className="fixed inset-0 z-10" 
+                          onClick={() => setShowProductDropdown(null)}
+                        />
+                        <div className="absolute z-20 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">
+                          {filteredProducts.map((product) => (
+                            <button
+                              key={product.id}
+                              type="button"
+                              onClick={() => selectProduct(product, item.id)}
+                              className="w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors flex justify-between items-center"
+                            >
+                              <span className="text-white text-sm">{product.name}</span>
+                              <span className="text-teal-400 font-mono text-sm">
+                                {formatCurrency(product.price, business.currency)}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </>
                     )}
                   </div>
 
@@ -429,13 +445,13 @@ function CreateInvoice() {
 
           {/* Notes */}
           <div className="glass rounded-2xl p-6">
-            <label className="input-label">Notes / Payment Terms</label>
+            <label className="input-label">Notes</label>
             <textarea
               name="notes"
               value={invoice.notes}
               onChange={handleInputChange}
               className="input-field min-h-[80px] resize-none"
-              placeholder="Add any notes or payment instructions..."
+              placeholder="Add any notes..."
             />
           </div>
         </div>
@@ -463,17 +479,6 @@ function CreateInvoice() {
                   type="date"
                   name="date"
                   value={invoice.date}
-                  onChange={handleInputChange}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="input-label">Due Date</label>
-                <input
-                  type="date"
-                  name="dueDate"
-                  value={invoice.dueDate}
                   onChange={handleInputChange}
                   className="input-field"
                 />
@@ -533,16 +538,6 @@ function CreateInvoice() {
         </div>
       </div>
 
-      {/* Click outside to close dropdowns */}
-      {(showCustomerDropdown || showProductDropdown) && (
-        <div
-          className="fixed inset-0 z-0"
-          onClick={() => {
-            setShowCustomerDropdown(false);
-            setShowProductDropdown(null);
-          }}
-        />
-      )}
     </div>
   );
 }

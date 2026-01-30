@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -16,19 +16,24 @@ import {
 import { invoiceStorage, businessStorage, settingsStorage } from '../utils/storage';
 import { formatCurrency, formatDate, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
 import { downloadInvoicePDF } from '../utils/pdfGenerator';
+import type { Invoice, InvoiceStats } from '../types';
+
+type SortField = 'date' | 'amount' | 'customer' | 'number';
+type SortOrder = 'asc' | 'desc';
+type StatusFilter = 'all' | 'draft' | 'pending' | 'paid' | 'overdue';
 
 function Invoices() {
   const business = businessStorage.get();
   const settings = settingsStorage.get();
-  const [invoices, setInvoices] = useState(() => invoiceStorage.getAll());
+  const [invoices, setInvoices] = useState<Invoice[]>(() => invoiceStorage.getAll());
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('date');
-  const [sortOrder, setSortOrder] = useState('desc');
-  const [activeMenu, setActiveMenu] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortBy, setSortBy] = useState<SortField>('date');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
-  const filteredInvoices = useMemo(() => {
+  const filteredInvoices = useMemo((): Invoice[] => {
     let result = [...invoices];
 
     if (searchQuery) {
@@ -47,11 +52,12 @@ function Invoices() {
     }
 
     result.sort((a, b) => {
-      let compareA, compareB;
+      let compareA: number | string;
+      let compareB: number | string;
       
       if (sortBy === 'date') {
-        compareA = new Date(a.createdAt || a.date);
-        compareB = new Date(b.createdAt || b.date);
+        compareA = new Date(a.createdAt || a.date).getTime();
+        compareB = new Date(b.createdAt || b.date).getTime();
       } else if (sortBy === 'amount') {
         const totalsA = calculateInvoiceTotals(a.items, a.taxRate, a.discount);
         const totalsB = calculateInvoiceTotals(b.items, b.taxRate, b.discount);
@@ -74,7 +80,7 @@ function Invoices() {
     return result;
   }, [invoices, searchQuery, statusFilter, sortBy, sortOrder]);
 
-  const stats = useMemo(() => ({
+  const stats = useMemo((): InvoiceStats => ({
     total: invoices.length,
     draft: invoices.filter((i) => i.status === 'draft').length,
     pending: invoices.filter((i) => i.status === 'pending').length,
@@ -82,25 +88,29 @@ function Invoices() {
     overdue: invoices.filter((i) => i.status === 'overdue').length,
   }), [invoices]);
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: string): void => {
     invoiceStorage.delete(id);
     setInvoices(invoiceStorage.getAll());
     setDeleteConfirm(null);
     setActiveMenu(null);
   };
 
-  const handleDownloadPDF = (invoice) => {
+  const handleDownloadPDF = (invoice: Invoice): void => {
     downloadInvoicePDF(invoice, business, settings);
     setActiveMenu(null);
   };
 
-  const toggleSort = (field) => {
+  const toggleSort = (field: SortField): void => {
     if (sortBy === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
       setSortBy(field);
       setSortOrder('desc');
     }
+  };
+
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    setSearchQuery(e.target.value);
   };
 
   return (
@@ -119,13 +129,13 @@ function Invoices() {
 
       {/* Stats Tabs */}
       <div className="flex flex-wrap gap-2">
-        {[
-          { key: 'all', label: 'All', count: stats.total },
-          { key: 'draft', label: 'Draft', count: stats.draft },
-          { key: 'pending', label: 'Pending', count: stats.pending },
-          { key: 'paid', label: 'Paid', count: stats.paid },
-          { key: 'overdue', label: 'Overdue', count: stats.overdue },
-        ].map((tab) => (
+        {([
+          { key: 'all' as const, label: 'All', count: stats.total },
+          { key: 'draft' as const, label: 'Draft', count: stats.draft },
+          { key: 'pending' as const, label: 'Pending', count: stats.pending },
+          { key: 'paid' as const, label: 'Paid', count: stats.paid },
+          { key: 'overdue' as const, label: 'Overdue', count: stats.overdue },
+        ]).map((tab) => (
           <button
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
@@ -149,7 +159,7 @@ function Invoices() {
             type="text"
             placeholder="Search invoices..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={handleSearchChange}
             className="input-field pl-12"
           />
         </div>

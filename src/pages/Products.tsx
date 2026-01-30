@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import {
   Plus,
   Search,
@@ -10,21 +10,24 @@ import {
 } from 'lucide-react';
 import { productStorage, businessStorage } from '../utils/storage';
 import { generateId, formatCurrency } from '../utils/helpers';
+import type { Product, ProductFormData, FormErrors } from '../types';
+
+const UNITS = ['piece', 'kg', 'g', 'liter', 'ml', 'dozen', 'box', 'pack', 'unit', 'hour', 'service'] as const;
 
 function Products() {
   const business = businessStorage.get();
-  const [products, setProducts] = useState(() => productStorage.getAll());
+  const [products, setProducts] = useState<Product[]>(() => productStorage.getAll());
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [formData, setFormData] = useState({
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     description: '',
     price: '',
     unit: 'piece',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const filteredProducts = products.filter(
     (p) =>
@@ -32,7 +35,7 @@ function Products() {
       p.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const openModal = (product = null) => {
+  const openModal = (product: Product | null = null): void => {
     if (product) {
       setEditingProduct(product);
       setFormData({
@@ -49,14 +52,14 @@ function Products() {
     setShowModal(true);
   };
 
-  const closeModal = () => {
+  const closeModal = (): void => {
     setShowModal(false);
     setEditingProduct(null);
     setFormData({ name: '', description: '', price: '', unit: 'piece' });
     setErrors({});
   };
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) {
@@ -64,8 +67,8 @@ function Products() {
     }
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
     if (!formData.name.trim()) {
       newErrors.name = 'Product name is required';
     }
@@ -76,10 +79,10 @@ function Products() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = (): void => {
     if (!validateForm()) return;
     
-    const productData = {
+    const productData: Product = {
       id: editingProduct?.id || generateId(),
       name: formData.name.trim(),
       description: formData.description.trim(),
@@ -92,13 +95,11 @@ function Products() {
     closeModal();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id: string): void => {
     productStorage.delete(id);
     setProducts(productStorage.getAll());
     setDeleteConfirm(null);
   };
-
-  const units = ['piece', 'kg', 'g', 'liter', 'ml', 'dozen', 'box', 'pack', 'unit', 'hour', 'service'];
 
   return (
     <div className="space-y-6">
@@ -244,7 +245,7 @@ function Products() {
                     onChange={handleInputChange}
                     className="input-field"
                   >
-                    {units.map((unit) => (
+                    {UNITS.map((unit) => (
                       <option key={unit} value={unit}>{unit}</option>
                     ))}
                   </select>

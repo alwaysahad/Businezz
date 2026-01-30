@@ -9,11 +9,22 @@ import {
   Plus,
   ArrowRight,
   IndianRupee,
+  type LucideIcon,
 } from 'lucide-react';
 import { invoiceStorage, businessStorage } from '../utils/storage';
-import { formatCurrency, formatDate, getRelativeTime, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
+import { formatCurrency, getRelativeTime, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
+import type { DashboardStats, Invoice } from '../types';
 
-function StatCard({ icon: Icon, label, value, subtext, color, delay }) {
+interface StatCardProps {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+  subtext?: string;
+  color: string;
+  delay: number;
+}
+
+function StatCard({ icon: Icon, label, value, subtext, color, delay }: StatCardProps) {
   return (
     <div className="glass rounded-2xl p-6 card-hover animate-slide-up" style={{ animationDelay: `${delay}ms` }}>
       <div className="flex items-start justify-between">
@@ -34,7 +45,7 @@ function Dashboard() {
   const business = businessStorage.get();
   const invoices = invoiceStorage.getAll();
 
-  const stats = useMemo(() => {
+  const stats = useMemo((): DashboardStats => {
     const now = new Date();
     const thisMonth = now.getMonth();
     const thisYear = now.getFullYear();
@@ -76,9 +87,9 @@ function Dashboard() {
     };
   }, [invoices]);
 
-  const recentInvoices = useMemo(() => {
+  const recentInvoices = useMemo((): Invoice[] => {
     return [...invoices]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
       .slice(0, 5);
   }, [invoices]);
 
@@ -219,7 +230,7 @@ function Dashboard() {
                         </span>
                       </div>
                       <p className="text-sm text-midnight-400 mt-1">
-                        {invoice.invoiceNumber} • {getRelativeTime(invoice.createdAt)}
+                        {invoice.invoiceNumber} • {getRelativeTime(invoice.createdAt || '')}
                       </p>
                     </div>
                     <p className="font-mono font-semibold text-white">
