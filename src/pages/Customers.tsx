@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -16,9 +16,15 @@ import {
 import { customerStorage, invoiceStorage } from '../utils/storage';
 import { generateId } from '../utils/helpers';
 import type { Customer, CustomerFormData, FormErrors, Invoice } from '../types';
+import { useSync } from '../contexts/SyncProvider';
 
 function Customers() {
+  const { lastSyncTime } = useSync();
   const [customers, setCustomers] = useState<Customer[]>(() => customerStorage.getAll());
+
+  useEffect(() => {
+    setCustomers(customerStorage.getAll());
+  }, [lastSyncTime]);
   const invoices: Invoice[] = invoiceStorage.getAll();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);

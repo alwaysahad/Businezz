@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import {
   Building2,
   Save,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { businessStorage, settingsStorage, cloudSync, isSupabaseConfigured } from '../utils/storage';
 import type { Business, Settings as SettingsType } from '../types';
+import { useSync } from '../contexts/SyncProvider';
 
 interface Currency {
   symbol: string;
@@ -43,8 +44,14 @@ const TABS: Tab[] = [
 ];
 
 function Settings() {
+  const { lastSyncTime } = useSync();
   const [business, setBusiness] = useState<Business>(() => businessStorage.get());
   const [settings, setSettings] = useState<SettingsType>(() => settingsStorage.get());
+
+  useEffect(() => {
+    setBusiness(businessStorage.get());
+    setSettings(settingsStorage.get());
+  }, [lastSyncTime]);
   const [saved, setSaved] = useState(false);
   const [activeTab, setActiveTab] = useState<'business' | 'invoice' | 'sync'>('business');
   const [syncing, setSyncing] = useState(false);
@@ -92,7 +99,7 @@ function Settings() {
   const handleSync = async (type: 'upload' | 'download' | 'full'): Promise<void> => {
     setSyncing(true);
     setSyncMessage(null);
-    
+
     try {
       let result;
       switch (type) {
@@ -106,12 +113,12 @@ function Settings() {
           result = await cloudSync.fullSync();
           break;
       }
-      
+
       setSyncMessage({
         type: result.success ? 'success' : 'error',
         text: result.message,
       });
-      
+
       // Refresh data if download was successful
       if (result.success && (type === 'download' || type === 'full')) {
         setBusiness(businessStorage.get());
@@ -161,11 +168,10 @@ function Settings() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-teal-500/20 text-teal-400'
-                  : 'text-midnight-400 hover:text-white hover:bg-midnight-700'
-              }`}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-colors ${activeTab === tab.id
+                ? 'bg-teal-500/20 text-teal-400'
+                : 'text-midnight-400 hover:text-white hover:bg-midnight-700'
+                }`}
             >
               <Icon className="w-5 h-5" />
               {tab.label}
@@ -180,7 +186,7 @@ function Settings() {
           <div className="lg:col-span-2 space-y-6">
             <div className="glass rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-white mb-4">Business Information</h2>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="input-label">Business Name</label>
@@ -298,7 +304,7 @@ function Settings() {
           <div className="space-y-6">
             <div className="glass rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-white mb-4">Business Logo</h2>
-              
+
               {business.logo ? (
                 <div className="relative">
                   <img src={business.logo} alt="Business logo" className="w-full h-40 object-contain bg-white rounded-xl" />
@@ -326,11 +332,10 @@ function Settings() {
                   <button
                     key={currency.symbol}
                     onClick={() => setBusiness((prev) => ({ ...prev, currency: currency.symbol }))}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                      business.currency === currency.symbol
-                        ? 'bg-teal-500/20 text-teal-400'
-                        : 'text-midnight-300 hover:bg-midnight-700'
-                    }`}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${business.currency === currency.symbol
+                      ? 'bg-teal-500/20 text-teal-400'
+                      : 'text-midnight-300 hover:bg-midnight-700'
+                      }`}
                   >
                     <span className="text-xl font-mono">{currency.symbol}</span>
                     <span className="text-sm">{currency.name}</span>
@@ -348,7 +353,7 @@ function Settings() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="glass rounded-2xl p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Invoice Defaults</h2>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="input-label">Invoice Prefix</label>
@@ -394,7 +399,7 @@ function Settings() {
 
           <div className="glass rounded-2xl p-6">
             <h2 className="text-lg font-semibold text-white mb-4">Invoice Display</h2>
-            
+
             <label className="flex items-center justify-between p-4 bg-midnight-800/50 rounded-xl cursor-pointer">
               <div>
                 <p className="text-white font-medium">Show Business Logo</p>
@@ -477,11 +482,10 @@ function Settings() {
           {isSupabaseConfigured && (
             <div className="glass rounded-2xl p-6">
               <h2 className="text-lg font-semibold text-white mb-4">Sync Actions</h2>
-              
+
               {syncMessage && (
-                <div className={`mb-4 p-4 rounded-xl ${
-                  syncMessage.type === 'success' ? 'bg-teal-500/20 text-teal-400' : 'bg-coral-500/20 text-coral-400'
-                }`}>
+                <div className={`mb-4 p-4 rounded-xl ${syncMessage.type === 'success' ? 'bg-teal-500/20 text-teal-400' : 'bg-coral-500/20 text-coral-400'
+                  }`}>
                   {syncMessage.text}
                 </div>
               )}

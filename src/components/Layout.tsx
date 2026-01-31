@@ -80,7 +80,7 @@ function Layout({ children }: LayoutProps) {
                 <Receipt className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-display font-bold text-white">InvoiceFlow</h1>
+                <h1 className="text-xl font-display font-bold text-white">Businezz</h1>
                 <p className="text-xs text-midnight-400">Smart Billing</p>
               </div>
             </Link>
@@ -208,7 +208,7 @@ function Layout({ children }: LayoutProps) {
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
               <Receipt className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display font-bold text-white text-lg">InvoiceFlow</span>
+            <span className="font-display font-bold text-white text-lg">Businezz</span>
           </Link>
           <div className="flex items-center gap-2">
             {isSupabaseConfigured && user && (

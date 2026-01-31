@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, useEffect, type ChangeEvent } from 'react';
 import {
   Plus,
   Search,
@@ -11,12 +11,18 @@ import {
 import { productStorage, businessStorage } from '../utils/storage';
 import { generateId, formatCurrency } from '../utils/helpers';
 import type { Product, ProductFormData, FormErrors } from '../types';
+import { useSync } from '../contexts/SyncProvider';
 
 const UNITS = ['piece', 'kg', 'g', 'liter', 'ml', 'dozen', 'box', 'pack', 'unit', 'hour', 'service'] as const;
 
 function Products() {
+  const { lastSyncTime } = useSync();
   const business = businessStorage.get();
   const [products, setProducts] = useState<Product[]>(() => productStorage.getAll());
+
+  useEffect(() => {
+    setProducts(productStorage.getAll());
+  }, [lastSyncTime]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -81,7 +87,7 @@ function Products() {
 
   const handleSave = (): void => {
     if (!validateForm()) return;
-    
+
     const productData: Product = {
       id: editingProduct?.id || generateId(),
       name: formData.name.trim(),

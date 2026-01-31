@@ -1,4 +1,4 @@
-import { useState, useMemo, type ChangeEvent } from 'react';
+import { useState, useMemo, useEffect, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -17,15 +17,22 @@ import { invoiceStorage, businessStorage, settingsStorage } from '../utils/stora
 import { formatCurrency, formatDate, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
 import { downloadInvoicePDF } from '../utils/pdfGenerator';
 import type { Invoice, InvoiceStats } from '../types';
+import { useSync } from '../contexts/SyncProvider';
 
 type SortField = 'date' | 'amount' | 'customer' | 'number';
 type SortOrder = 'asc' | 'desc';
 type StatusFilter = 'all' | 'draft' | 'pending' | 'paid' | 'overdue';
 
 function Invoices() {
+  const { lastSyncTime } = useSync();
   const business = businessStorage.get();
   const settings = settingsStorage.get();
   const [invoices, setInvoices] = useState<Invoice[]>(() => invoiceStorage.getAll());
+
+  useEffect(() => {
+    setInvoices(invoiceStorage.getAll());
+  }, [lastSyncTime]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [sortBy, setSortBy] = useState<SortField>('date');
@@ -54,7 +61,7 @@ function Invoices() {
     result.sort((a, b) => {
       let compareA: number | string;
       let compareB: number | string;
-      
+
       if (sortBy === 'date') {
         compareA = new Date(a.createdAt || a.date).getTime();
         compareB = new Date(b.createdAt || b.date).getTime();
@@ -139,11 +146,10 @@ function Invoices() {
           <button
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
-              statusFilter === tab.key
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${statusFilter === tab.key
                 ? 'bg-teal-500/20 text-teal-400'
                 : 'bg-midnight-700/50 text-midnight-300 hover:bg-midnight-700'
-            }`}
+              }`}
           >
             {tab.label}
             <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-midnight-800">{tab.count}</span>
@@ -176,6 +182,7 @@ function Invoices() {
             onClick={() => toggleSort('amount')}
             className={`btn-secondary flex items-center gap-2 ${sortBy === 'amount' ? 'border-teal-500' : ''}`}
           >
+            <AmountIcon className="w-4 h-4" />
             Amount
             {sortBy === 'amount' && (sortOrder === 'asc' ? <SortAsc className="w-4 h-4" /> : <SortDesc className="w-4 h-4" />)}
           </button>
@@ -307,6 +314,16 @@ function Invoices() {
         </div>
       )}
     </div>
+  );
+}
+
+function AmountIcon(props: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+      <path d="M12 18V6" />
+    </svg>
   );
 }
 

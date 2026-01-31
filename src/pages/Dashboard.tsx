@@ -14,6 +14,7 @@ import {
 import { invoiceStorage, businessStorage } from '../utils/storage';
 import { formatCurrency, getRelativeTime, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
 import type { DashboardStats, Invoice } from '../types';
+import { useSync } from '../contexts/SyncProvider';
 
 interface StatCardProps {
   icon: LucideIcon;
@@ -42,8 +43,10 @@ function StatCard({ icon: Icon, label, value, subtext, color, delay }: StatCardP
 }
 
 function Dashboard() {
-  const business = businessStorage.get();
-  const invoices = invoiceStorage.getAll();
+  const { lastSyncTime } = useSync();
+
+  const business = useMemo(() => businessStorage.get(), [lastSyncTime]);
+  const invoices = useMemo(() => invoiceStorage.getAll(), [lastSyncTime]);
 
   const stats = useMemo((): DashboardStats => {
     const now = new Date();

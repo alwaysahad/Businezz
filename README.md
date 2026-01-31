@@ -1,4 +1,4 @@
-# InvoiceFlow - Smart Invoice Generator
+# Businezz - Smart Invoice Generator
 
 A modern, beautiful invoice generator application designed for small businesses like stationery shops, grocery stores, bakeries, and more. Create, manage, and share professional digital invoices with ease.
 
