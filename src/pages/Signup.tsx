@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { cloudSync } from '../utils/storage';
+import { uploadLocalDataToCloud } from '../utils/migrationHelper';
 
 function Signup() {
     const navigate = useNavigate();
@@ -38,7 +38,7 @@ function Signup() {
             } else {
                 // After successful signup, migrate local data to cloud
                 try {
-                    await cloudSync.uploadToCloud();
+                    await uploadLocalDataToCloud();
                 } catch (syncError) {
                     console.error('Failed to sync local data:', syncError);
                     // Don't show error to user, they can sync manually later

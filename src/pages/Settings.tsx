@@ -6,17 +6,11 @@ import {
   Upload,
   Trash2,
   FileText,
-  HardDrive,
-  Cloud,
-  CloudOff,
-  RefreshCw,
-  Download,
-  UploadCloud,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
-import { businessStorage, settingsStorage, cloudSync, isSupabaseConfigured } from '../utils/storage';
 import type { Business, Settings as SettingsType } from '../types';
-import { useSync } from '../contexts/SyncProvider';
+import { useBusiness, useSettings } from '../hooks/useData';
 
 interface Currency {
   symbol: string;
@@ -24,7 +18,7 @@ interface Currency {
 }
 
 interface Tab {
-  id: 'business' | 'invoice' | 'sync';
+  id: 'business' | 'invoice';
   label: string;
   icon: LucideIcon;
 }
@@ -40,22 +34,26 @@ const CURRENCIES: Currency[] = [
 const TABS: Tab[] = [
   { id: 'business', label: 'Business Profile', icon: Building2 },
   { id: 'invoice', label: 'Invoice Settings', icon: FileText },
-  { id: 'sync', label: 'Cloud Sync', icon: Cloud },
 ];
 
 function Settings() {
-  const { lastSyncTime } = useSync();
-  const [business, setBusiness] = useState<Business>(() => businessStorage.get());
-  const [settings, setSettings] = useState<SettingsType>(() => settingsStorage.get());
+  const { business: businessData, loading: businessLoading, saveBusiness } = useBusiness();
+  const { settings: settingsData, loading: settingsLoading, saveSettings } = useSettings();
+
+  const [business, setBusiness] = useState<Business>({} as Business);
+  const [settings, setSettings] = useState<SettingsType>({} as SettingsType);
 
   useEffect(() => {
-    setBusiness(businessStorage.get());
-    setSettings(settingsStorage.get());
-  }, [lastSyncTime]);
+    if (businessData && Object.keys(businessData).length > 0) setBusiness(businessData);
+  }, [businessData]);
+
+  useEffect(() => {
+    if (settingsData && Object.keys(settingsData).length > 0) setSettings(settingsData);
+  }, [settingsData]);
+
   const [saved, setSaved] = useState(false);
-  const [activeTab, setActiveTab] = useState<'business' | 'invoice' | 'sync'>('business');
-  const [syncing, setSyncing] = useState(false);
-  const [syncMessage, setSyncMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<'business' | 'invoice'>('business');
 
   const handleBusinessChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
@@ -70,11 +68,20 @@ function Settings() {
     }));
   };
 
-  const handleSave = (): void => {
-    businessStorage.save(business);
-    settingsStorage.save(settings);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await Promise.all([
+        saveBusiness(business),
+        saveSettings(settings)
+      ]);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleLogoUpload = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -96,43 +103,16 @@ function Settings() {
     setSettings((prev) => ({ ...prev, showLogo: !prev.showLogo }));
   };
 
-  const handleSync = async (type: 'upload' | 'download' | 'full'): Promise<void> => {
-    setSyncing(true);
-    setSyncMessage(null);
-
-    try {
-      let result;
-      switch (type) {
-        case 'upload':
-          result = await cloudSync.uploadToCloud();
-          break;
-        case 'download':
-          result = await cloudSync.downloadFromCloud();
-          break;
-        case 'full':
-          result = await cloudSync.fullSync();
-          break;
-      }
-
-      setSyncMessage({
-        type: result.success ? 'success' : 'error',
-        text: result.message,
-      });
-
-      // Refresh data if download was successful
-      if (result.success && (type === 'download' || type === 'full')) {
-        setBusiness(businessStorage.get());
-        setSettings(settingsStorage.get());
-      }
-    } catch (error) {
-      setSyncMessage({
-        type: 'error',
-        text: `Sync failed: ${(error as Error).message}`,
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
+  if (businessLoading || settingsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
+          <p className="text-midnight-400">Loading settings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -144,9 +124,15 @@ function Settings() {
         </div>
         <button
           onClick={handleSave}
+          disabled={isSaving}
           className={`btn-primary flex items-center gap-2 self-start transition-all ${saved ? 'bg-teal-600' : ''}`}
         >
-          {saved ? (
+          {isSaving ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              Saving...
+            </>
+          ) : saved ? (
             <>
               <Check className="w-5 h-5" />
               Saved!
@@ -193,7 +179,7 @@ function Settings() {
                   <input
                     type="text"
                     name="name"
-                    value={business.name}
+                    value={business.name || ''}
                     onChange={handleBusinessChange}
                     className="input-field"
                     placeholder="Your business name"
@@ -204,7 +190,7 @@ function Settings() {
                   <label className="input-label">Address</label>
                   <textarea
                     name="address"
-                    value={business.address}
+                    value={business.address || ''}
                     onChange={handleBusinessChange}
                     className="input-field min-h-[80px] resize-none"
                     placeholder="Business address"
@@ -217,7 +203,7 @@ function Settings() {
                     <input
                       type="text"
                       name="city"
-                      value={business.city}
+                      value={business.city || ''}
                       onChange={handleBusinessChange}
                       className="input-field"
                       placeholder="City"
@@ -228,7 +214,7 @@ function Settings() {
                     <input
                       type="text"
                       name="state"
-                      value={business.state}
+                      value={business.state || ''}
                       onChange={handleBusinessChange}
                       className="input-field"
                       placeholder="State"
@@ -239,7 +225,7 @@ function Settings() {
                     <input
                       type="text"
                       name="pincode"
-                      value={business.pincode}
+                      value={business.pincode || ''}
                       onChange={handleBusinessChange}
                       className="input-field"
                       placeholder="PIN Code"
@@ -253,7 +239,7 @@ function Settings() {
                     <input
                       type="tel"
                       name="phone"
-                      value={business.phone}
+                      value={business.phone || ''}
                       onChange={handleBusinessChange}
                       className="input-field"
                       placeholder="Business phone"
@@ -264,7 +250,7 @@ function Settings() {
                     <input
                       type="email"
                       name="email"
-                      value={business.email}
+                      value={business.email || ''}
                       onChange={handleBusinessChange}
                       className="input-field"
                       placeholder="business@email.com"
@@ -277,24 +263,11 @@ function Settings() {
                   <input
                     type="text"
                     name="taxId"
-                    value={business.taxId}
+                    value={business.taxId || ''}
                     onChange={handleBusinessChange}
                     className="input-field font-mono"
                     placeholder="Tax registration number"
                   />
-                </div>
-              </div>
-            </div>
-
-            {/* Storage Info */}
-            <div className="glass rounded-2xl p-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2 rounded-lg bg-teal-500/20">
-                  <HardDrive className="w-5 h-5 text-teal-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">Local Storage</p>
-                  <p className="text-midnight-400 text-sm">All data is saved locally in your browser</p>
                 </div>
               </div>
             </div>
@@ -360,7 +333,7 @@ function Settings() {
                 <input
                   type="text"
                   name="invoicePrefix"
-                  value={settings.invoicePrefix}
+                  value={settings.invoicePrefix || ''}
                   onChange={handleSettingsChange}
                   className="input-field font-mono"
                   placeholder="INV"
@@ -377,7 +350,7 @@ function Settings() {
                   name="taxRate"
                   min="0"
                   max="100"
-                  value={settings.taxRate}
+                  value={settings.taxRate || 0}
                   onChange={handleSettingsChange}
                   className="input-field"
                 />
@@ -426,149 +399,11 @@ function Settings() {
                 </div>
                 <div className="text-right">
                   <p className="text-gray-400 text-sm uppercase">Invoice</p>
-                  <p className="font-mono font-bold">{settings.invoicePrefix}-2026-0001</p>
+                  <p className="font-mono font-bold">{settings.invoicePrefix || 'INV'}-2026-0001</p>
                 </div>
               </div>
               <div className="mt-4 text-sm text-gray-600">
-                <p>{settings.taxLabel || 'Tax'} Rate: {settings.taxRate}%</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cloud Sync Tab */}
-      {activeTab === 'sync' && (
-        <div className="max-w-2xl mx-auto space-y-6">
-          {/* Connection Status */}
-          <div className="glass rounded-2xl p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className={`p-3 rounded-xl ${isSupabaseConfigured ? 'bg-teal-500/20' : 'bg-coral-500/20'}`}>
-                {isSupabaseConfigured ? (
-                  <Cloud className="w-6 h-6 text-teal-400" />
-                ) : (
-                  <CloudOff className="w-6 h-6 text-coral-400" />
-                )}
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-white">Cloud Sync Status</h2>
-                <p className={`text-sm ${isSupabaseConfigured ? 'text-teal-400' : 'text-coral-400'}`}>
-                  {isSupabaseConfigured ? 'Connected to Supabase' : 'Not Configured'}
-                </p>
-              </div>
-            </div>
-
-            {!isSupabaseConfigured && (
-              <div className="bg-midnight-800/50 rounded-xl p-4 space-y-3">
-                <p className="text-midnight-300 text-sm">
-                  To sync invoices across devices, set up Supabase:
-                </p>
-                <ol className="text-midnight-400 text-sm list-decimal list-inside space-y-2">
-                  <li>Create a free account at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer" className="text-teal-400 hover:underline">supabase.com</a></li>
-                  <li>Create a new project and run the database schema</li>
-                  <li>Add these environment variables to your deployment:
-                    <div className="mt-2 bg-midnight-900 rounded-lg p-3 font-mono text-xs">
-                      <div>VITE_SUPABASE_URL=your_project_url</div>
-                      <div>VITE_SUPABASE_ANON_KEY=your_anon_key</div>
-                    </div>
-                  </li>
-                  <li>Redeploy your application</li>
-                </ol>
-              </div>
-            )}
-          </div>
-
-          {/* Sync Actions */}
-          {isSupabaseConfigured && (
-            <div className="glass rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Sync Actions</h2>
-
-              {syncMessage && (
-                <div className={`mb-4 p-4 rounded-xl ${syncMessage.type === 'success' ? 'bg-teal-500/20 text-teal-400' : 'bg-coral-500/20 text-coral-400'
-                  }`}>
-                  {syncMessage.text}
-                </div>
-              )}
-
-              <div className="space-y-4">
-                {/* Full Sync */}
-                <button
-                  onClick={() => handleSync('full')}
-                  disabled={syncing}
-                  className="w-full flex items-center gap-4 p-4 bg-teal-500/10 hover:bg-teal-500/20 rounded-xl transition-colors disabled:opacity-50"
-                >
-                  <div className="p-3 rounded-xl bg-teal-500/20">
-                    <RefreshCw className={`w-6 h-6 text-teal-400 ${syncing ? 'animate-spin' : ''}`} />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-white font-medium">Full Sync</p>
-                    <p className="text-midnight-400 text-sm">Download from cloud, then upload local changes</p>
-                  </div>
-                </button>
-
-                {/* Upload to Cloud */}
-                <button
-                  onClick={() => handleSync('upload')}
-                  disabled={syncing}
-                  className="w-full flex items-center gap-4 p-4 bg-midnight-800/50 hover:bg-midnight-700/50 rounded-xl transition-colors disabled:opacity-50"
-                >
-                  <div className="p-3 rounded-xl bg-purple-500/20">
-                    <UploadCloud className="w-6 h-6 text-purple-400" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-white font-medium">Upload to Cloud</p>
-                    <p className="text-midnight-400 text-sm">Push all local data to cloud storage</p>
-                  </div>
-                </button>
-
-                {/* Download from Cloud */}
-                <button
-                  onClick={() => handleSync('download')}
-                  disabled={syncing}
-                  className="w-full flex items-center gap-4 p-4 bg-midnight-800/50 hover:bg-midnight-700/50 rounded-xl transition-colors disabled:opacity-50"
-                >
-                  <div className="p-3 rounded-xl bg-blue-500/20">
-                    <Download className="w-6 h-6 text-blue-400" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-white font-medium">Download from Cloud</p>
-                    <p className="text-midnight-400 text-sm">Get latest data from cloud storage</p>
-                  </div>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* How It Works */}
-          <div className="glass rounded-2xl p-6">
-            <h2 className="text-lg font-semibold text-white mb-4">How Cloud Sync Works</h2>
-            <div className="space-y-4 text-midnight-300 text-sm">
-              <div className="flex gap-3">
-                <div className="p-2 rounded-lg bg-midnight-800 h-fit">
-                  <HardDrive className="w-4 h-4 text-midnight-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">Local-First</p>
-                  <p>Your data is always saved locally in your browser. The app works offline.</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="p-2 rounded-lg bg-midnight-800 h-fit">
-                  <Cloud className="w-4 h-4 text-midnight-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">Cloud Backup</p>
-                  <p>When you sync, your data is stored in Supabase (PostgreSQL database).</p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <div className="p-2 rounded-lg bg-midnight-800 h-fit">
-                  <RefreshCw className="w-4 h-4 text-midnight-400" />
-                </div>
-                <div>
-                  <p className="text-white font-medium">Multi-Device</p>
-                  <p>Sync on any device to get your latest invoices, customers, and products.</p>
-                </div>
+                <p>{settings.taxLabel || 'Tax'} Rate: {settings.taxRate || 0}%</p>
               </div>
             </div>
           </div>

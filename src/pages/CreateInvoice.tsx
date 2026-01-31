@@ -7,40 +7,39 @@ import {
   Eye,
   ArrowLeft,
   User,
+  Loader2,
 } from 'lucide-react';
-import { invoiceStorage, businessStorage, customerStorage, productStorage, settingsStorage } from '../utils/storage';
 import { generateId, formatCurrency, formatDate, calculateInvoiceTotals } from '../utils/helpers';
 import type { Invoice, InvoiceItem, Customer, Product, FormErrors } from '../types';
+import { useInvoices, useInvoice, useCustomers, useProducts, useBusiness, useSettings } from '../hooks/useData';
 
 function CreateInvoice() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
 
-  const business = businessStorage.get();
-  const settings = settingsStorage.get();
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-
-  // Load customers and products on mount
-  useEffect(() => {
-    setCustomers(customerStorage.getAll());
-    setProducts(productStorage.getAll());
-  }, []);
+  const { invoice: existingInvoice, loading: invoiceLoading } = useInvoice(id);
+  const { invoices } = useInvoices(); // For next number calculation
+  const { customers } = useCustomers();
+  const { products } = useProducts();
+  const { business } = useBusiness();
+  const { settings } = useSettings();
+  const { saveInvoice } = useInvoices();
 
   const [invoice, setInvoice] = useState<Invoice>({
     id: generateId(),
-    invoiceNumber: invoiceStorage.getNextInvoiceNumber(),
+    invoiceNumber: '', // Will be set once invoices load or settings load
     date: formatDate(new Date(), 'input'),
     customerName: '',
     customerEmail: '',
     customerPhone: '',
     customerAddress: '',
     items: [{ id: generateId(), name: '', quantity: 1, price: 0 }],
-    taxRate: business.taxRate || settings.taxRate || 0,
+    taxRate: 0,
     discount: 0,
     notes: '',
     status: 'draft',
+    user_id: '', // Will be set by Supabase
   });
 
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
@@ -48,20 +47,45 @@ function CreateInvoice() {
   const [customerSearch, setCustomerSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [errors, setErrors] = useState<FormErrors>({});
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Initialize form data
   useEffect(() => {
-    if (isEditing && id) {
-      const existingInvoice = invoiceStorage.getById(id);
+    if (isEditing) {
       if (existingInvoice) {
         setInvoice({
           ...existingInvoice,
           date: formatDate(existingInvoice.date, 'input'),
         });
-      } else {
-        navigate('/invoices');
+      }
+    } else {
+      // Create mode: Set defaults once dependencies are loaded
+      if (business && settings && invoices) {
+        // Calculate next invoice number
+        const prefix = settings.invoicePrefix || 'INV';
+        const currentYear = new Date().getFullYear();
+        const yearPrefix = `${prefix}-${currentYear}-`;
+
+        // Simple auto-increment logic based on existing invoices
+        // This might not be perfect in concurrent environments but works for single user
+        const existingNumbers = invoices
+          .map(inv => inv.invoiceNumber)
+          .filter(num => num.startsWith(yearPrefix))
+          .map(num => parseInt(num.split('-').pop() || '0'))
+          .filter(n => !isNaN(n));
+
+        const maxNum = existingNumbers.length > 0 ? Math.max(...existingNumbers) : 0;
+        const nextNum = (maxNum + 1).toString().padStart(4, '0');
+        const nextInvoiceNumber = `${yearPrefix}${nextNum}`;
+
+        setInvoice(prev => ({
+          ...prev,
+          invoiceNumber: prev.invoiceNumber || nextInvoiceNumber,
+          taxRate: prev.taxRate || business.taxRate || settings.taxRate || 0,
+        }));
       }
     }
-  }, [id, isEditing, navigate]);
+  }, [isEditing, existingInvoice, business, settings, invoices]);
 
   const totals = useMemo(() => {
     return calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
@@ -155,29 +179,45 @@ function CreateInvoice() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (status: 'draft' | 'pending' = 'draft'): void => {
+  const handleSave = async (status: 'draft' | 'pending' = 'draft') => {
     if (!validateForm()) return;
 
-    const invoiceToSave: Invoice = {
-      ...invoice,
-      status,
-      date: new Date(invoice.date).toISOString(),
-    };
+    setIsSaving(true);
+    try {
+      const invoiceToSave: Invoice = {
+        ...invoice,
+        status,
+        date: new Date(invoice.date).toISOString(),
+      };
 
-    invoiceStorage.save(invoiceToSave);
+      await saveInvoice(invoiceToSave);
 
-    if (invoice.customerName && !customers.find(c => c.name === invoice.customerName)) {
-      customerStorage.save({
-        id: generateId(),
-        name: invoice.customerName,
-        email: invoice.customerEmail,
-        phone: invoice.customerPhone,
-        address: invoice.customerAddress,
-      });
+      // Note: Customer saving is implicitly handled if you want to reuse them, 
+      // but here we are just saving the invoice. 
+      // If we want to auto-save new customers to the 'customers' table, 
+      // we'd need to call saveCustomer from useCustomers hook.
+      // For now, removing implicit customer creation to keep it simple 
+      // and avoid circular dependency or complex logic in UI.
+      // Users should add customers in Customers tab or we can add a "Save Customer" button later.
+
+      navigate(`/invoices/view/${invoice.id}`);
+    } catch (error) {
+      console.error('Failed to save invoice:', error);
+    } finally {
+      setIsSaving(false);
     }
-
-    navigate(`/invoices/view/${invoice.id}`);
   };
+
+  if (isEditing && invoiceLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
+          <p className="text-midnight-400">Loading invoice...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -194,22 +234,24 @@ function CreateInvoice() {
             <h1 className="text-xl sm:text-2xl font-display font-bold text-white truncate">
               {isEditing ? 'Edit Invoice' : 'Create Invoice'}
             </h1>
-            <p className="text-midnight-400 text-sm">{invoice.invoiceNumber}</p>
+            <p className="text-midnight-400 text-sm">{invoice.invoiceNumber || 'Generating number...'}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => handleSave('draft')}
+            disabled={isSaving}
             className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none"
           >
-            <Save className="w-4 h-4" />
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>Save Draft</span>
           </button>
           <button
             onClick={() => handleSave('pending')}
+            disabled={isSaving}
             className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none"
           >
-            <Eye className="w-4 h-4" />
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
             <span>Save & Preview</span>
           </button>
         </div>
@@ -244,8 +286,8 @@ function CreateInvoice() {
                   />
                   {showCustomerDropdown && filteredCustomers.length > 0 && (
                     <>
-                      <div 
-                        className="fixed inset-0 z-10" 
+                      <div
+                        className="fixed inset-0 z-10"
                         onClick={() => setShowCustomerDropdown(false)}
                       />
                       <div className="absolute z-20 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">
@@ -364,8 +406,8 @@ function CreateInvoice() {
                     />
                     {showProductDropdown === item.id && filteredProducts.length > 0 && (
                       <>
-                        <div 
-                          className="fixed inset-0 z-10" 
+                        <div
+                          className="fixed inset-0 z-10"
                           onClick={() => setShowProductDropdown(null)}
                         />
                         <div className="absolute z-20 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">

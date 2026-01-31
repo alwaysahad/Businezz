@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -10,12 +10,13 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
-import { invoiceStorage, businessStorage, settingsStorage } from '../utils/storage';
 import { formatCurrency, formatDate, calculateInvoiceTotals, numberToWords, getStatusColor, getStatusLabel } from '../utils/helpers';
 import { downloadInvoicePDF, openInvoicePDFInNewTab, getInvoicePDFBlob } from '../utils/pdfGenerator';
 import type { Invoice, InvoiceStatus } from '../types';
+import { useInvoice, useBusiness, useSettings } from '../hooks/useData';
 
 interface StatusOption {
   value: InvoiceStatus;
@@ -27,32 +28,47 @@ interface StatusOption {
 function ViewInvoice() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const printRef = useRef<HTMLDivElement>(null);
+  // We can treat id as possibly undefined, but in practice URL param will exist.
+  // Hook expects separate args or check inside.
+  // My useInvoice hook takes id as argument.
+  const { invoice, loading: invoiceLoading, saveInvoice } = useInvoice(id);
+  const { business, loading: businessLoading } = useBusiness();
+  const { settings, loading: settingsLoading } = useSettings();
 
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  const business = businessStorage.get();
-  const settings = settingsStorage.get();
+  const loading = invoiceLoading || businessLoading || settingsLoading;
 
-  useEffect(() => {
-    if (id) {
-      const inv = invoiceStorage.getById(id);
-      if (inv) {
-        setInvoice(inv);
-      } else {
-        navigate('/invoices');
-      }
-    }
-  }, [id, navigate]);
-
-  if (!invoice) {
+  if (loading && !invoice) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full" />
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="animate-spin w-8 h-8 text-teal-400" />
+          <p className="text-midnight-400">Loading invoice...</p>
+        </div>
       </div>
     );
+  }
+
+  if (!invoice) {
+    if (!loading) {
+      // If not loading and no invoice, it likely means it wasn't found.
+      // We can redirect or show error.
+      // For now, let's show a "Not Found" message.
+      return (
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-white mb-4">Invoice Not Found</h2>
+          <Link to="/invoices" className="btn-primary inline-flex items-center gap-2">
+            <ArrowLeft className="w-5 h-5" />
+            Back to Invoices
+          </Link>
+        </div>
+      );
+    }
+    return null; // Should be covered by loading check
   }
 
   const totals = calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
@@ -65,11 +81,17 @@ function ViewInvoice() {
     openInvoicePDFInNewTab(invoice, business, settings);
   };
 
-  const handleStatusChange = (newStatus: InvoiceStatus): void => {
-    const updatedInvoice: Invoice = { ...invoice, status: newStatus };
-    invoiceStorage.save(updatedInvoice);
-    setInvoice(updatedInvoice);
-    setShowStatusMenu(false);
+  const handleStatusChange = async (newStatus: InvoiceStatus): Promise<void> => {
+    setIsUpdatingStatus(true);
+    try {
+      const updatedInvoice: Invoice = { ...invoice, status: newStatus };
+      await saveInvoice(updatedInvoice);
+      setShowStatusMenu(false);
+    } catch (error) {
+      console.error('Failed to update status', error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
   const handleSharePDF = async (): Promise<void> => {
@@ -77,7 +99,7 @@ function ViewInvoice() {
     try {
       const pdfBlob = getInvoicePDFBlob(invoice, business, settings);
       const pdfFile = new File([pdfBlob], `${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' });
-      
+
       if (navigator.share && navigator.canShare({ files: [pdfFile] })) {
         await navigator.share({
           title: `Invoice ${invoice.invoiceNumber}`,
@@ -90,7 +112,8 @@ function ViewInvoice() {
       }
     } catch (error) {
       // User cancelled or error occurred
-      if ((error as Error).name !== 'AbortError') {
+      const err = error as Error;
+      if (err.name !== 'AbortError') {
         console.error('Error sharing:', error);
         // Fallback to download
         downloadInvoicePDF(invoice, business, settings);
@@ -125,9 +148,10 @@ function ViewInvoice() {
               <div className="relative">
                 <button
                   onClick={() => setShowStatusMenu(!showStatusMenu)}
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(invoice.status)} hover:opacity-80 transition-opacity`}
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(invoice.status)} hover:opacity-80 transition-opacity flex items-center gap-2`}
+                  disabled={isUpdatingStatus}
                 >
-                  {getStatusLabel(invoice.status)}
+                  {isUpdatingStatus ? <Loader2 className="w-3 h-3 animate-spin" /> : getStatusLabel(invoice.status)}
                 </button>
                 {showStatusMenu && (
                   <>
@@ -139,9 +163,8 @@ function ViewInvoice() {
                           <button
                             key={option.value}
                             onClick={() => handleStatusChange(option.value)}
-                            className={`flex items-center gap-3 px-4 py-3 w-full hover:bg-midnight-700 transition-colors ${
-                              invoice.status === option.value ? 'bg-midnight-700' : ''
-                            }`}
+                            className={`flex items-center gap-3 px-4 py-3 w-full hover:bg-midnight-700 transition-colors ${invoice.status === option.value ? 'bg-midnight-700' : ''
+                              }`}
                           >
                             <Icon className={`w-4 h-4 ${option.color}`} />
                             <span className="text-white">{option.label}</span>
@@ -174,8 +197,8 @@ function ViewInvoice() {
             <Printer className="w-4 h-4" />
             <span className="hidden xs:inline">Print</span>
           </button>
-          <button 
-            onClick={handleSharePDF} 
+          <button
+            onClick={handleSharePDF}
             disabled={sharing}
             className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none disabled:opacity-50"
           >

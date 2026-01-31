@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -12,24 +12,23 @@ import {
   Mail,
   MapPin,
   FileText,
+  Loader2,
 } from 'lucide-react';
-import { customerStorage, invoiceStorage } from '../utils/storage';
 import { generateId } from '../utils/helpers';
-import type { Customer, CustomerFormData, FormErrors, Invoice } from '../types';
-import { useSync } from '../contexts/SyncProvider';
+import type { Customer, CustomerFormData, FormErrors } from '../types';
+import { useCustomers, useInvoices } from '../hooks/useData';
 
 function Customers() {
-  const { lastSyncTime } = useSync();
-  const [customers, setCustomers] = useState<Customer[]>(() => customerStorage.getAll());
+  const { customers, loading, saveCustomer, deleteCustomer } = useCustomers();
+  const { invoices } = useInvoices(); // Used for stats
 
-  useEffect(() => {
-    setCustomers(customerStorage.getAll());
-  }, [lastSyncTime]);
-  const invoices: Invoice[] = invoiceStorage.getAll();
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [formData, setFormData] = useState<CustomerFormData>({
     name: '',
     phone: '',
@@ -90,27 +89,50 @@ function Customers() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (): void => {
+  const handleSave = async () => {
     if (!validateForm()) return;
 
-    const customerData: Customer = {
-      id: editingCustomer?.id || generateId(),
-      name: formData.name.trim(),
-      phone: formData.phone.trim(),
-      email: formData.email.trim(),
-      address: formData.address.trim(),
-    };
+    setIsSaving(true);
+    try {
+      const customerData: Customer = {
+        id: editingCustomer?.id || generateId(),
+        name: formData.name.trim(),
+        phone: formData.phone.trim(),
+        email: formData.email.trim(),
+        address: formData.address.trim(),
+      };
 
-    customerStorage.save(customerData);
-    setCustomers(customerStorage.getAll());
-    closeModal();
+      await saveCustomer(customerData);
+      closeModal();
+    } catch (error) {
+      console.error('Failed to save customer:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (id: string): void => {
-    customerStorage.delete(id);
-    setCustomers(customerStorage.getAll());
-    setDeleteConfirm(null);
+  const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await deleteCustomer(id);
+    } catch (error) {
+      console.error('Failed to delete customer:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(null);
+    }
   };
+
+  if (loading && customers.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
+          <p className="text-midnight-400">Loading customers...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -289,8 +311,8 @@ function Customers() {
 
             <div className="flex gap-3 mt-6">
               <button onClick={closeModal} className="btn-secondary flex-1">Cancel</button>
-              <button onClick={handleSave} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <Save className="w-4 h-4" />
+              <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {editingCustomer ? 'Update' : 'Add Customer'}
               </button>
             </div>
@@ -305,8 +327,10 @@ function Customers() {
             <h3 className="text-xl font-semibold text-white mb-2">Delete Customer?</h3>
             <p className="text-midnight-400 mb-6">This customer will be permanently deleted.</p>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
-              <button onClick={() => handleDelete(deleteConfirm)} className="btn-danger">Delete</button>
+              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary" disabled={isDeleting}>Cancel</button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="btn-danger" disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

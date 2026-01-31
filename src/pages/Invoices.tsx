@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type ChangeEvent } from 'react';
+import { useState, useMemo, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Plus,
@@ -12,26 +12,23 @@ import {
   Calendar,
   SortAsc,
   SortDesc,
+  Loader2,
 } from 'lucide-react';
-import { invoiceStorage, businessStorage, settingsStorage } from '../utils/storage';
 import { formatCurrency, formatDate, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
 import { downloadInvoicePDF } from '../utils/pdfGenerator';
 import type { Invoice, InvoiceStats } from '../types';
-import { useSync } from '../contexts/SyncProvider';
+import { useInvoices, useBusiness, useSettings } from '../hooks/useData';
 
 type SortField = 'date' | 'amount' | 'customer' | 'number';
 type SortOrder = 'asc' | 'desc';
 type StatusFilter = 'all' | 'draft' | 'pending' | 'paid' | 'overdue';
 
 function Invoices() {
-  const { lastSyncTime } = useSync();
-  const business = businessStorage.get();
-  const settings = settingsStorage.get();
-  const [invoices, setInvoices] = useState<Invoice[]>(() => invoiceStorage.getAll());
+  const { invoices, loading: invoicesLoading, deleteInvoice } = useInvoices();
+  const { business, loading: businessLoading } = useBusiness();
+  const { settings, loading: settingsLoading } = useSettings();
 
-  useEffect(() => {
-    setInvoices(invoiceStorage.getAll());
-  }, [lastSyncTime]);
+  const loading = invoicesLoading || businessLoading || settingsLoading;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -39,6 +36,7 @@ function Invoices() {
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredInvoices = useMemo((): Invoice[] => {
     let result = [...invoices];
@@ -95,11 +93,17 @@ function Invoices() {
     overdue: invoices.filter((i) => i.status === 'overdue').length,
   }), [invoices]);
 
-  const handleDelete = (id: string): void => {
-    invoiceStorage.delete(id);
-    setInvoices(invoiceStorage.getAll());
-    setDeleteConfirm(null);
-    setActiveMenu(null);
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await deleteInvoice(id);
+    } catch (error) {
+      console.error('Failed to delete invoice:', error);
+    } finally {
+      setDeletingId(null);
+      setDeleteConfirm(null);
+      setActiveMenu(null);
+    }
   };
 
   const handleDownloadPDF = (invoice: Invoice): void => {
@@ -119,6 +123,17 @@ function Invoices() {
   const handleSearchChange = (e: ChangeEvent<HTMLInputElement>): void => {
     setSearchQuery(e.target.value);
   };
+
+  if (loading && invoices.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
+          <p className="text-midnight-400">Loading invoices...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -147,8 +162,8 @@ function Invoices() {
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${statusFilter === tab.key
-                ? 'bg-teal-500/20 text-teal-400'
-                : 'bg-midnight-700/50 text-midnight-300 hover:bg-midnight-700'
+              ? 'bg-teal-500/20 text-teal-400'
+              : 'bg-midnight-700/50 text-midnight-300 hover:bg-midnight-700'
               }`}
           >
             {tab.label}
@@ -307,8 +322,10 @@ function Invoices() {
             <h3 className="text-xl font-semibold text-white mb-2">Delete Invoice?</h3>
             <p className="text-midnight-400 mb-6">This action cannot be undone.</p>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
-              <button onClick={() => handleDelete(deleteConfirm)} className="btn-danger">Delete</button>
+              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary" disabled={deletingId !== null}>Cancel</button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="btn-danger" disabled={deletingId !== null}>
+                {deletingId ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

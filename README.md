@@ -1,6 +1,15 @@
 # Businezz - Smart Invoice Generator
 
-A modern, beautiful invoice generator application designed for small businesses like stationery shops, grocery stores, bakeries, and more. Create, manage, and share professional digital invoices with ease.
+A modern, cloud-powered invoice generator application designed for small businesses. Create, manage, and share professional digital invoices with ease, synced across all your devices.
+
+## 🚀 Cloud-Powered Architecture
+
+Businezz is now fully cloud-only, providing seamless synchronization and real-time updates across multiple devices. No more worries about losing data when clearing browser cache!
+
+### Key Cloud Features:
+- **Real-time Sync**: Changes on one device reflect instantly on all others.
+- **Secure Authentication**: Your data is protected by the Supabase Auth system.
+- **Automated Backups**: All your invoices, customers, and products are stored securely in the cloud.
 
 ## Features
 
@@ -9,7 +18,7 @@ A modern, beautiful invoice generator application designed for small businesses 
 - Edit and update existing invoices
 - Track invoice status (Draft, Pending, Paid, Overdue)
 - Search and filter invoices by customer, date, or status
-- Automatic invoice numbering
+- Automatic invoice numbering with customizable prefixes
 
 ### 👥 Customer Management
 - Store customer information for quick access
@@ -17,62 +26,57 @@ A modern, beautiful invoice generator application designed for small businesses 
 - View invoice history per customer
 
 ### 📦 Product Catalog
-- Maintain a product/service catalog with prices
+- Maintain a product catalog with prices
 - Quick product selection when creating invoices
 - Support for different units (piece, kg, dozen, etc.)
 
 ### 📤 Sharing & Export
 - Download invoices as PDF
 - Print invoices directly
-- Share via WhatsApp
-- Share via Email
-- Copy invoice details to clipboard
-
-### 💼 Business Profile
-- Customize business name, address, and contact info
-- Add your business logo
-- Configure GSTIN/Tax ID
-- Multiple currency support (₹, $, €, £, ¥)
-
-### ⚙️ Settings
-- Configurable tax rates
-- Custom invoice prefix
-- Default payment terms
-- Toggle logo display on invoices
+- Share via Native Web Share (WhatsApp, Email, etc.)
 
 ## Tech Stack
 
-- **React 18** - Modern React with hooks
-- **Vite** - Lightning fast build tool
-- **Tailwind CSS** - Utility-first CSS framework
-- **React Router** - Client-side routing
-- **jsPDF** - PDF generation
-- **Lucide React** - Beautiful icons
-- **Supabase** - Backend as a Service (Authentication + Database + Real-time)
-- **LocalStorage** - Offline-first data persistence
+- **React 18** - Frontend UI
+- **Vite** - Build Tool
+- **Tailwind CSS** - Modern Styling
+- **Supabase** - Cloud Backend (Auth, Database, Real-time)
+- **Lucide React** - Icon System
+- **jsPDF** - PDF Generation
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+ installed
 - npm or yarn
-- (Optional) Supabase account for multi-device sync
+- A Supabase account (Free tier)
 
-### Installation
+### Setup & Installation
 
-1. Clone or download this project
+1. **Clone or download** this project.
 
-2. Install dependencies:
-```bash
-npm install
-```
+2. **Supabase Configuration**:
+   - Create a new project at [supabase.com](https://supabase.com).
+   - Run the schema provided in `database/schema.sql` in the Supabase SQL Editor.
+   - Go to **Project Settings > API** to get your `URL` and `anon key`.
 
-3. Start the development server:
-```bash
-npm run dev
-```
+3. **Configure Environment Variables**:
+   ```bash
+   cp .env.example .env
+   # Add your credentials to .env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-4. Open your browser and visit `http://localhost:5173`
+4. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+5. **Start Development**:
+   ```bash
+   npm run dev
+   ```
 
 ### Building for Production
 
@@ -80,76 +84,19 @@ npm run dev
 npm run build
 ```
 
-The built files will be in the `dist` folder, ready to deploy.
+The built files will be in the `dist` folder, ready to be deployed to platforms like Vercel, Netlify, or GH Pages.
 
-## Usage Guide
+## 📦 Deployment Instructions
 
-### First Time Setup
-1. Go to **Settings** and fill in your business details
-2. Add your business logo (optional)
-3. Configure your preferred currency and tax rate
+### Vercel / Netlify
+1. Push your code to a GitHub repository.
+2. Connect the repository to Vercel/Netlify.
+3. Configure the environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) in the provider's dashboard.
+4. Set the build command to `npm run build` and output directory to `dist`.
 
-### Creating an Invoice
-1. Click **New Invoice** from the dashboard or sidebar
-2. Enter customer details (auto-saved for future use)
-3. Add items - select from your product catalog or enter manually
-4. Adjust tax rate and discount if needed
-5. Add notes or payment terms
-6. Save as Draft or Save & Preview
+## Data Security
 
-### Managing Products
-1. Go to **Products** page
-2. Add your frequently sold items with prices
-3. These will appear as suggestions when creating invoices
-
-### Sharing Invoices
-1. View any invoice
-2. Click **Share** button
-3. Choose WhatsApp, Email, or copy to clipboard
-4. Download PDF for records
-
-## Multi-Device Sync (Optional)
-
-The app works perfectly offline with local storage. To enable multi-device synchronization:
-
-### Setup Supabase
-
-1. **Create a Supabase account** at [supabase.com](https://supabase.com)
-2. **Create a new project** and run the database schema from `/database/schema.sql`
-3. **Get your credentials** from Settings → API
-4. **Configure environment variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env and add your Supabase URL and anon key
-   ```
-5. **Restart the dev server**:
-   ```bash
-   npm run dev
-   ```
-
-### Using Multi-Device Sync
-
-1. **Sign up** for an account in the app
-2. Your existing local data will be automatically synced to the cloud
-3. **Sign in** on any other device with the same account
-4. All your invoices, customers, and products will sync automatically
-5. Changes made on one device appear instantly on all other devices
-
-For detailed setup instructions, see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
-
-## Data Storage
-
-All data is stored locally in your browser using LocalStorage. This means:
-- ✅ No server required
-- ✅ Works offline
-- ✅ Your data stays private
-- ⚠️ Clear browser data will delete invoices
-
-For backup, regularly download PDFs of important invoices.
-
-## License
-
-MIT License - Feel free to use and modify for your business needs.
+Businezz uses **Supabase Row Level Security (RLS)** to ensure that your data is only accessible to you. Each record is tagged with your unique `user_id`, preventing unauthorized access.
 
 ---
 

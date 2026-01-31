@@ -1,4 +1,4 @@
-import { useState, useEffect, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import {
   Plus,
   Search,
@@ -7,26 +7,26 @@ import {
   Package,
   X,
   Save,
+  Loader2,
 } from 'lucide-react';
-import { productStorage, businessStorage } from '../utils/storage';
 import { generateId, formatCurrency } from '../utils/helpers';
 import type { Product, ProductFormData, FormErrors } from '../types';
-import { useSync } from '../contexts/SyncProvider';
+import { useProducts, useBusiness } from '../hooks/useData';
 
 const UNITS = ['piece', 'kg', 'g', 'liter', 'ml', 'dozen', 'box', 'pack', 'unit', 'hour', 'service'] as const;
 
 function Products() {
-  const { lastSyncTime } = useSync();
-  const business = businessStorage.get();
-  const [products, setProducts] = useState<Product[]>(() => productStorage.getAll());
+  const { products, loading: productsLoading, saveProduct, deleteProduct } = useProducts();
+  const { business, loading: businessLoading } = useBusiness();
+  const loading = productsLoading || businessLoading;
 
-  useEffect(() => {
-    setProducts(productStorage.getAll());
-  }, [lastSyncTime]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [formData, setFormData] = useState<ProductFormData>({
     name: '',
     description: '',
@@ -85,27 +85,50 @@ function Products() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (): void => {
+  const handleSave = async () => {
     if (!validateForm()) return;
 
-    const productData: Product = {
-      id: editingProduct?.id || generateId(),
-      name: formData.name.trim(),
-      description: formData.description.trim(),
-      price: parseFloat(formData.price),
-      unit: formData.unit,
-    };
+    setIsSaving(true);
+    try {
+      const productData: Product = {
+        id: editingProduct?.id || generateId(),
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        price: parseFloat(formData.price),
+        unit: formData.unit,
+      };
 
-    productStorage.save(productData);
-    setProducts(productStorage.getAll());
-    closeModal();
+      await saveProduct(productData);
+      closeModal();
+    } catch (error) {
+      console.error('Failed to save product:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (id: string): void => {
-    productStorage.delete(id);
-    setProducts(productStorage.getAll());
-    setDeleteConfirm(null);
+  const handleDelete = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await deleteProduct(id);
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+    } finally {
+      setIsDeleting(false);
+      setDeleteConfirm(null);
+    }
   };
+
+  if (loading && products.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
+          <p className="text-midnight-400">Loading products...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -261,8 +284,8 @@ function Products() {
 
             <div className="flex gap-3 mt-6">
               <button onClick={closeModal} className="btn-secondary flex-1">Cancel</button>
-              <button onClick={handleSave} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                <Save className="w-4 h-4" />
+              <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {editingProduct ? 'Update' : 'Add Product'}
               </button>
             </div>
@@ -277,8 +300,10 @@ function Products() {
             <h3 className="text-xl font-semibold text-white mb-2">Delete Product?</h3>
             <p className="text-midnight-400 mb-6">This product will be permanently deleted.</p>
             <div className="flex gap-3 justify-end">
-              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary">Cancel</button>
-              <button onClick={() => handleDelete(deleteConfirm)} className="btn-danger">Delete</button>
+              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary" disabled={isDeleting}>Cancel</button>
+              <button onClick={() => handleDelete(deleteConfirm)} className="btn-danger" disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

@@ -9,12 +9,12 @@ import {
   Plus,
   ArrowRight,
   IndianRupee,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react';
-import { invoiceStorage, businessStorage } from '../utils/storage';
 import { formatCurrency, getRelativeTime, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
 import type { DashboardStats, Invoice } from '../types';
-import { useSync } from '../contexts/SyncProvider';
+import { useInvoices, useBusiness } from '../hooks/useData';
 
 interface StatCardProps {
   icon: LucideIcon;
@@ -43,10 +43,9 @@ function StatCard({ icon: Icon, label, value, subtext, color, delay }: StatCardP
 }
 
 function Dashboard() {
-  const { lastSyncTime } = useSync();
-
-  const business = useMemo(() => businessStorage.get(), [lastSyncTime]);
-  const invoices = useMemo(() => invoiceStorage.getAll(), [lastSyncTime]);
+  const { business, loading: businessLoading } = useBusiness();
+  const { invoices, loading: invoicesLoading } = useInvoices();
+  const loading = businessLoading || invoicesLoading;
 
   const stats = useMemo((): DashboardStats => {
     const now = new Date();
@@ -95,6 +94,17 @@ function Dashboard() {
       .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
       .slice(0, 5);
   }, [invoices]);
+
+  if (loading && invoices.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
+          <p className="text-midnight-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -248,7 +258,7 @@ function Dashboard() {
       </div>
 
       {/* Empty State for New Users */}
-      {!business.name && invoices.length === 0 && (
+      {!business.name && invoices.length === 0 && !loading && (
         <div className="glass rounded-2xl p-8 text-center animate-slide-up" style={{ animationDelay: '600ms' }}>
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center mx-auto mb-4 shadow-glow">
             <TrendingUp className="w-8 h-8 text-white" />

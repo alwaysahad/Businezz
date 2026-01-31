@@ -23,6 +23,7 @@ export interface Invoice {
   status: InvoiceStatus;
   createdAt?: string;
   updatedAt?: string;
+  user_id?: string;
 }
 
 // Customer Types
