@@ -147,7 +147,7 @@ export const businessDB = {
       .select('*')
       .single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    return data ? mapBusinessFromDB(data) : null;
   },
 
   async save(business: Business): Promise<Business> {
@@ -155,19 +155,18 @@ export const businessDB = {
     const userId = await getCurrentUserId();
     if (!userId) throw new Error('User not authenticated');
 
-    const existingBusiness = await businessDB.get();
-    const businessWithUserId = {
-      ...business,
-      id: existingBusiness?.id || business.id,
+    const dbBusiness = {
+      ...mapBusinessToDB(business),
       user_id: userId
     };
+
     const { data, error } = await supabase
       .from(TABLES.BUSINESS)
-      .upsert(businessWithUserId, { onConflict: 'user_id' })
+      .upsert(dbBusiness, { onConflict: 'user_id' })
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return mapBusinessFromDB(data);
   },
 };
 
@@ -180,7 +179,7 @@ export const settingsDB = {
       .select('*')
       .single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    return data ? mapSettingsFromDB(data) : null;
   },
 
   async save(settings: Settings): Promise<Settings> {
@@ -188,19 +187,18 @@ export const settingsDB = {
     const userId = await getCurrentUserId();
     if (!userId) throw new Error('User not authenticated');
 
-    const existingSettings = await settingsDB.get();
-    const settingsWithUserId = {
-      ...settings,
-      id: existingSettings?.id || settings.id,
+    const dbSettings = {
+      ...mapSettingsToDB(settings),
       user_id: userId
     };
+
     const { data, error } = await supabase
       .from(TABLES.SETTINGS)
-      .upsert(settingsWithUserId, { onConflict: 'user_id' })
+      .upsert(dbSettings, { onConflict: 'user_id' })
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return mapSettingsFromDB(data);
   },
 };
 
@@ -327,6 +325,70 @@ function mapToDB(invoice: Invoice): Record<string, unknown> {
     notes: invoice.notes,
     status: invoice.status,
     created_at: invoice.createdAt || new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// Map database record to Business type
+function mapBusinessFromDB(data: Record<string, unknown>): Business {
+  return {
+    id: data.id as string,
+    name: data.name as string,
+    address: data.address as string,
+    city: data.city as string,
+    state: data.state as string,
+    pincode: data.pincode as string,
+    phone: data.phone as string,
+    email: data.email as string,
+    taxId: data.tax_id as string,
+    logo: data.logo as string | null,
+    currency: data.currency as string,
+    taxRate: data.tax_rate as number,
+  };
+}
+
+// Map Business to database record
+function mapBusinessToDB(business: Business): Record<string, unknown> {
+  return {
+    id: business.id,
+    name: business.name,
+    address: business.address,
+    city: business.city,
+    state: business.state,
+    pincode: business.pincode,
+    phone: business.phone,
+    email: business.email,
+    tax_id: business.taxId,
+    logo: business.logo,
+    currency: business.currency,
+    tax_rate: business.taxRate,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+// Map database record to Settings type
+function mapSettingsFromDB(data: Record<string, unknown>): Settings {
+  return {
+    id: data.id as string,
+    currency: data.currency as string,
+    taxRate: data.tax_rate as number,
+    invoicePrefix: data.invoice_prefix as string,
+    defaultPaymentTerms: data.default_payment_terms as string,
+    showLogo: data.show_logo as boolean,
+    taxLabel: data.tax_label as string,
+  };
+}
+
+// Map Settings to database record
+function mapSettingsToDB(settings: Settings): Record<string, unknown> {
+  return {
+    id: settings.id,
+    currency: settings.currency,
+    tax_rate: settings.taxRate,
+    invoice_prefix: settings.invoicePrefix,
+    default_payment_terms: settings.defaultPaymentTerms,
+    show_logo: settings.showLogo,
+    tax_label: settings.taxLabel,
     updated_at: new Date().toISOString(),
   };
 }

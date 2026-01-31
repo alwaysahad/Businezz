@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { SyncProvider } from './contexts/SyncProvider';
@@ -13,8 +14,14 @@ import Settings from './pages/Settings';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import ForgotPassword from './pages/ForgotPassword';
+import { migrateDataToUUID } from './utils/migration';
 
 function App() {
+  useEffect(() => {
+    // Migrate existing data to UUIDs to ensure compatibility with Supabase
+    migrateDataToUUID();
+  }, []);
+
   return (
     <Router>
       <AuthProvider>

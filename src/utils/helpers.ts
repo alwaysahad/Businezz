@@ -1,16 +1,24 @@
 import type { InvoiceItem, InvoiceTotals, InvoiceStatus, DateFormat } from '../types';
 
-// Generate unique ID
+// Generate unique ID (UUID v4)
 export const generateId = (): string => {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  // Fallback for older browsers (though unlikely needed for this stack)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 };
 
 // Format currency
 export const formatCurrency = (amount: number | string, currency: string = '₹'): string => {
   const num = parseFloat(String(amount)) || 0;
-  return `${currency}${num.toLocaleString('en-IN', { 
-    minimumFractionDigits: 2, 
-    maximumFractionDigits: 2 
+  return `${currency}${num.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
   })}`;
 };
 
@@ -18,7 +26,7 @@ export const formatCurrency = (amount: number | string, currency: string = '₹'
 export const formatDate = (date: string | Date | null | undefined, format: DateFormat = 'short'): string => {
   if (!date) return '';
   const d = new Date(date);
-  
+
   if (format === 'short') {
     return d.toLocaleDateString('en-IN', {
       day: '2-digit',
@@ -26,7 +34,7 @@ export const formatDate = (date: string | Date | null | undefined, format: DateF
       year: 'numeric',
     });
   }
-  
+
   if (format === 'long') {
     return d.toLocaleDateString('en-IN', {
       weekday: 'long',
@@ -35,29 +43,29 @@ export const formatDate = (date: string | Date | null | undefined, format: DateF
       year: 'numeric',
     });
   }
-  
+
   if (format === 'input') {
     return d.toISOString().split('T')[0];
   }
-  
+
   return d.toLocaleDateString();
 };
 
 // Calculate invoice totals
 export const calculateInvoiceTotals = (
-  items: InvoiceItem[], 
-  taxRate: number = 0, 
+  items: InvoiceItem[],
+  taxRate: number = 0,
   discount: number = 0
 ): InvoiceTotals => {
   const subtotal = items.reduce((sum, item) => {
     return sum + (parseFloat(String(item.quantity)) || 0) * (parseFloat(String(item.price)) || 0);
   }, 0);
-  
+
   const discountAmount = (subtotal * (parseFloat(String(discount)) || 0)) / 100;
   const taxableAmount = subtotal - discountAmount;
   const taxAmount = (taxableAmount * (parseFloat(String(taxRate)) || 0)) / 100;
   const total = taxableAmount + taxAmount;
-  
+
   return {
     subtotal,
     discountAmount,
@@ -105,7 +113,7 @@ export const isValidPhone = (phone: string): boolean => {
 
 // Debounce function
 export const debounce = <T extends (...args: unknown[]) => unknown>(
-  func: T, 
+  func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
   let timeout: ReturnType<typeof setTimeout>;
@@ -124,7 +132,7 @@ export const getRelativeTime = (date: string | Date): string => {
   const diffMins = Math.floor(diffSecs / 60);
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
-  
+
   if (diffDays > 30) {
     return formatDate(date, 'short');
   }
@@ -151,32 +159,32 @@ export const numberToWords = (num: number): string => {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
     'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  
+
   if (num === 0) return 'Zero';
   if (num < 0) return 'Minus ' + numberToWords(-num);
-  
+
   let words = '';
-  
+
   if (Math.floor(num / 10000000) > 0) {
     words += numberToWords(Math.floor(num / 10000000)) + ' Crore ';
     num %= 10000000;
   }
-  
+
   if (Math.floor(num / 100000) > 0) {
     words += numberToWords(Math.floor(num / 100000)) + ' Lakh ';
     num %= 100000;
   }
-  
+
   if (Math.floor(num / 1000) > 0) {
     words += numberToWords(Math.floor(num / 1000)) + ' Thousand ';
     num %= 1000;
   }
-  
+
   if (Math.floor(num / 100) > 0) {
     words += numberToWords(Math.floor(num / 100)) + ' Hundred ';
     num %= 100;
   }
-  
+
   if (num > 0) {
     if (words !== '') words += 'and ';
     if (num < 20) {
@@ -188,6 +196,6 @@ export const numberToWords = (num: number): string => {
       }
     }
   }
-  
+
   return words.trim();
 };
