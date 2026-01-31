@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   FileText,
@@ -10,8 +10,16 @@ import {
   X,
   Plus,
   Receipt,
+  LogOut,
+  User,
+  Cloud,
+  CloudOff,
+  CheckCircle,
   type LucideIcon,
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { useSync } from '../contexts/SyncProvider';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 interface NavItem {
   path: string;
@@ -33,11 +41,20 @@ interface LayoutProps {
 
 function Layout({ children }: LayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { syncStatus } = useSync();
 
   const isActive = (path: string): boolean => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
   };
 
   return (
@@ -52,9 +69,8 @@ function Layout({ children }: LayoutProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:transform-none ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
       >
         <div className="h-full flex flex-col glass rounded-r-2xl lg:rounded-2xl m-0 lg:m-4">
           {/* Logo */}
@@ -92,11 +108,10 @@ function Layout({ children }: LayoutProps) {
                   key={item.path}
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    active
-                      ? 'bg-teal-500/20 text-teal-400'
-                      : 'text-midnight-300 hover:bg-white/5 hover:text-white'
-                  }`}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${active
+                    ? 'bg-teal-500/20 text-teal-400'
+                    : 'text-midnight-300 hover:bg-white/5 hover:text-white'
+                    }`}
                 >
                   <Icon className={`w-5 h-5 ${active ? 'text-teal-400' : ''}`} />
                   <span className="font-medium">{item.label}</span>
@@ -108,13 +123,79 @@ function Layout({ children }: LayoutProps) {
             })}
           </nav>
 
-          {/* Footer */}
+          {/* User Menu / Footer */}
           <div className="p-4 border-t border-white/10">
-            <div className="text-center">
-              <p className="text-xs text-midnight-400">
-                Made with ❤️ for small businesses
-              </p>
-            </div>
+            {isSupabaseConfigured && user ? (
+              <div className="space-y-3">
+                {/* Sync Status */}
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-midnight-800/50">
+                  {syncStatus === 'synced' ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-teal-400" />
+                      <span className="text-xs text-teal-400">Synced</span>
+                    </>
+                  ) : syncStatus === 'syncing' ? (
+                    <>
+                      <Cloud className="w-4 h-4 text-blue-400 animate-pulse" />
+                      <span className="text-xs text-blue-400">Syncing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Cloud className="w-4 h-4 text-midnight-400" />
+                      <span className="text-xs text-midnight-400">Idle</span>
+                    </>
+                  )}
+                </div>
+
+                {/* User Info */}
+                <div className="relative">
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex-1 text-left overflow-hidden">
+                      <p className="text-sm text-white font-medium truncate">{user.email}</p>
+                      <p className="text-xs text-midnight-400">Account</p>
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {userMenuOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setUserMenuOpen(false)}
+                      />
+                      <div className="absolute bottom-full left-0 right-0 mb-2 glass rounded-lg p-2 z-50 animate-fade-in">
+                        <button
+                          onClick={handleSignOut}
+                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-coral-400 hover:bg-coral-500/10 transition-colors"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          <span className="text-sm font-medium">Sign Out</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center">
+                {isSupabaseConfigured ? (
+                  <div className="space-y-2">
+                    <CloudOff className="w-6 h-6 text-midnight-500 mx-auto" />
+                    <p className="text-xs text-midnight-400">Not signed in</p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-midnight-400">
+                    Made with ❤️ for small businesses
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </aside>
@@ -129,17 +210,49 @@ function Layout({ children }: LayoutProps) {
             </div>
             <span className="font-display font-bold text-white text-lg">InvoiceFlow</span>
           </Link>
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-3 -mr-1 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors"
-            aria-label="Toggle menu"
-          >
-            {sidebarOpen ? (
-              <X className="w-6 h-6 text-white" />
-            ) : (
-              <Menu className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-2">
+            {isSupabaseConfigured && user && (
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="p-2 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors relative"
+                aria-label="User menu"
+              >
+                <User className="w-5 h-5 text-white" />
+                {userMenuOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setUserMenuOpen(false)}
+                    />
+                    <div className="absolute top-full right-0 mt-2 glass rounded-lg p-2 z-50 animate-fade-in min-w-[200px]">
+                      <div className="px-3 py-2 border-b border-white/10 mb-2">
+                        <p className="text-sm text-white font-medium truncate">{user.email}</p>
+                        <p className="text-xs text-midnight-400">Account</p>
+                      </div>
+                      <button
+                        onClick={handleSignOut}
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-coral-400 hover:bg-coral-500/10 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span className="text-sm font-medium">Sign Out</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </button>
             )}
-          </button>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="p-3 -mr-1 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {sidebarOpen ? (
+                <X className="w-6 h-6 text-white" />
+              ) : (
+                <Menu className="w-6 h-6 text-white" />
+              )}
+            </button>
+          </div>
         </header>
 
         {/* Page content */}

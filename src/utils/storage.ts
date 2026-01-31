@@ -187,3 +187,119 @@ export const settingsStorage = {
     return storage.set(STORAGE_KEYS.SETTINGS, settings);
   },
 };
+
+// ============================================
+// CLOUD SYNC FUNCTIONS
+// ============================================
+
+// Check if cloud sync is available
+function isCloudAvailable(): boolean {
+  return isSupabaseConfigured;
+}
+
+// Upload all local data to cloud
+async function uploadToCloud(): Promise<{ success: boolean; message: string }> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: 'Cloud sync not configured. Please add Supabase credentials.' };
+  }
+  
+  const localData = {
+    invoices: invoiceStorage.getAll(),
+    customers: customerStorage.getAll(),
+    products: productStorage.getAll(),
+    business: businessStorage.get(),
+    settings: settingsStorage.get(),
+  };
+  
+  return syncToCloud(localData);
+}
+
+// Download data from cloud and merge with local
+async function downloadFromCloud(): Promise<{ success: boolean; message: string }> {
+  if (!isSupabaseConfigured) {
+    return { success: false, message: 'Cloud sync not configured. Please add Supabase credentials.' };
+  }
+  
+  const result = await syncFromCloud();
+  
+  if (!result.success || !result.data) {
+    return { success: false, message: result.message };
+  }
+  
+  const { data } = result;
+  
+  // Merge cloud data with local (cloud takes priority for conflicts)
+  const localInvoices = invoiceStorage.getAll();
+  const mergedInvoices = mergeData(localInvoices, data.invoices);
+  storage.set(STORAGE_KEYS.INVOICES, mergedInvoices);
+  
+  const localCustomers = customerStorage.getAll();
+  const mergedCustomers = mergeData(localCustomers, data.customers);
+  storage.set(STORAGE_KEYS.CUSTOMERS, mergedCustomers);
+  
+  const localProducts = productStorage.getAll();
+  const mergedProducts = mergeData(localProducts, data.products);
+  storage.set(STORAGE_KEYS.PRODUCTS, mergedProducts);
+  
+  if (data.business) {
+    storage.set(STORAGE_KEYS.BUSINESS, data.business);
+  }
+  
+  if (data.settings) {
+    storage.set(STORAGE_KEYS.SETTINGS, data.settings);
+  }
+  
+  return { success: true, message: `Synced! ${mergedInvoices.length} invoices, ${mergedCustomers.length} customers, ${mergedProducts.length} products.` };
+}
+
+// Full two-way sync
+async function fullSync(): Promise<{ success: boolean; message: string }> {
+  // First download from cloud
+  const downloadResult = await downloadFromCloud();
+  if (!downloadResult.success) {
+    return downloadResult;
+  }
+  
+  // Then upload to cloud
+  const uploadResult = await uploadToCloud();
+  if (!uploadResult.success) {
+    return uploadResult;
+  }
+  
+  return { success: true, message: 'Two-way sync completed successfully!' };
+}
+
+// Export as object for convenience
+export const cloudSync = {
+  isAvailable: isCloudAvailable,
+  uploadToCloud,
+  downloadFromCloud,
+  fullSync,
+};
+
+// Helper function to merge two arrays by ID (cloud data takes priority)
+function mergeData<T extends { id: string; updatedAt?: string }>(local: T[], cloud: T[]): T[] {
+  const merged = new Map<string, T>();
+  
+  // Add local items first
+  for (const item of local) {
+    merged.set(item.id, item);
+  }
+  
+  // Override with cloud items (cloud takes priority)
+  for (const item of cloud) {
+    const existing = merged.get(item.id);
+    if (!existing) {
+      merged.set(item.id, item);
+    } else {
+      // Compare updated timestamps if available
+      const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+      const cloudTime = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+      if (cloudTime >= existingTime) {
+        merged.set(item.id, item);
+      }
+    }
+  }
+  
+  return Array.from(merged.values());
+}

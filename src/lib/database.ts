@@ -2,6 +2,17 @@ import { supabase, isSupabaseConfigured, TABLES } from './supabase';
 import type { Invoice, Customer, Product, Business, Settings } from '../types';
 
 // ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+// Get current user ID
+async function getCurrentUserId(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id || null;
+}
+
+// ============================================
 // DATABASE SERVICE - Cloud Sync Operations
 // ============================================
 
@@ -30,7 +41,10 @@ export const invoiceDB = {
 
   async save(invoice: Invoice): Promise<Invoice> {
     if (!supabase) throw new Error('Database not configured');
-    const dbInvoice = mapToDB(invoice);
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error('User not authenticated');
+
+    const dbInvoice = { ...mapToDB(invoice), user_id: userId };
     const { data, error } = await supabase
       .from(TABLES.INVOICES)
       .upsert(dbInvoice, { onConflict: 'id' })
@@ -64,9 +78,13 @@ export const customerDB = {
 
   async save(customer: Customer): Promise<Customer> {
     if (!supabase) throw new Error('Database not configured');
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error('User not authenticated');
+
+    const customerWithUserId = { ...customer, user_id: userId };
     const { data, error } = await supabase
       .from(TABLES.CUSTOMERS)
-      .upsert(customer, { onConflict: 'id' })
+      .upsert(customerWithUserId, { onConflict: 'id' })
       .select()
       .single();
     if (error) throw error;
@@ -97,9 +115,13 @@ export const productDB = {
 
   async save(product: Product): Promise<Product> {
     if (!supabase) throw new Error('Database not configured');
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error('User not authenticated');
+
+    const productWithUserId = { ...product, user_id: userId };
     const { data, error } = await supabase
       .from(TABLES.PRODUCTS)
-      .upsert(product, { onConflict: 'id' })
+      .upsert(productWithUserId, { onConflict: 'id' })
       .select()
       .single();
     if (error) throw error;
@@ -130,11 +152,18 @@ export const businessDB = {
 
   async save(business: Business): Promise<Business> {
     if (!supabase) throw new Error('Database not configured');
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error('User not authenticated');
+
     const existingBusiness = await businessDB.get();
-    const businessWithId = { ...business, id: existingBusiness?.id || business.id || 'default' };
+    const businessWithUserId = {
+      ...business,
+      id: existingBusiness?.id || business.id,
+      user_id: userId
+    };
     const { data, error } = await supabase
       .from(TABLES.BUSINESS)
-      .upsert(businessWithId, { onConflict: 'id' })
+      .upsert(businessWithUserId, { onConflict: 'user_id' })
       .select()
       .single();
     if (error) throw error;
@@ -156,11 +185,18 @@ export const settingsDB = {
 
   async save(settings: Settings): Promise<Settings> {
     if (!supabase) throw new Error('Database not configured');
+    const userId = await getCurrentUserId();
+    if (!userId) throw new Error('User not authenticated');
+
     const existingSettings = await settingsDB.get();
-    const settingsWithId = { ...settings, id: existingSettings?.id || settings.id || 'default' };
+    const settingsWithUserId = {
+      ...settings,
+      id: existingSettings?.id || settings.id,
+      user_id: userId
+    };
     const { data, error } = await supabase
       .from(TABLES.SETTINGS)
-      .upsert(settingsWithId, { onConflict: 'id' })
+      .upsert(settingsWithUserId, { onConflict: 'user_id' })
       .select()
       .single();
     if (error) throw error;

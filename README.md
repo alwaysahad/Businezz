@@ -48,13 +48,15 @@ A modern, beautiful invoice generator application designed for small businesses 
 - **React Router** - Client-side routing
 - **jsPDF** - PDF generation
 - **Lucide React** - Beautiful icons
-- **LocalStorage** - Data persistence
+- **Supabase** - Backend as a Service (Authentication + Database + Real-time)
+- **LocalStorage** - Offline-first data persistence
 
 ## Getting Started
 
 ### Prerequisites
 - Node.js 18+ installed
 - npm or yarn
+- (Optional) Supabase account for multi-device sync
 
 ### Installation
 
@@ -105,6 +107,35 @@ The built files will be in the `dist` folder, ready to deploy.
 2. Click **Share** button
 3. Choose WhatsApp, Email, or copy to clipboard
 4. Download PDF for records
+
+## Multi-Device Sync (Optional)
+
+The app works perfectly offline with local storage. To enable multi-device synchronization:
+
+### Setup Supabase
+
+1. **Create a Supabase account** at [supabase.com](https://supabase.com)
+2. **Create a new project** and run the database schema from `/database/schema.sql`
+3. **Get your credentials** from Settings → API
+4. **Configure environment variables**:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your Supabase URL and anon key
+   ```
+5. **Restart the dev server**:
+   ```bash
+   npm run dev
+   ```
+
+### Using Multi-Device Sync
+
+1. **Sign up** for an account in the app
+2. Your existing local data will be automatically synced to the cloud
+3. **Sign in** on any other device with the same account
+4. All your invoices, customers, and products will sync automatically
+5. Changes made on one device appear instantly on all other devices
+
+For detailed setup instructions, see [SUPABASE_SETUP.md](./SUPABASE_SETUP.md)
 
 ## Data Storage
 
