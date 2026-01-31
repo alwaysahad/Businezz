@@ -175,13 +175,13 @@ function Invoices() {
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search invoices..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="input-field pl-12"
+            className="input-field pl-11"
           />
         </div>
         <div className="flex gap-2">
@@ -224,7 +224,7 @@ function Invoices() {
           {filteredInvoices.map((invoice) => {
             const totals = calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
             return (
-              <div key={invoice.id} className="glass rounded-xl p-4 sm:p-6 card-hover animate-fade-in">
+              <div key={invoice.id} className={`glass rounded-xl p-4 sm:p-6 card-hover animate-fade-in ${activeMenu === invoice.id ? 'relative z-30' : ''}`}>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
@@ -269,7 +269,7 @@ function Invoices() {
                       {activeMenu === invoice.id && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setActiveMenu(null)} />
-                          <div className="absolute right-0 top-full mt-2 w-48 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden z-20">
+                          <div className="absolute right-0 top-full mt-2 w-48 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden z-50">
                             <Link
                               to={`/invoices/view/${invoice.id}`}
                               className="flex items-center gap-3 px-4 py-3 text-white hover:bg-midnight-700 transition-colors"

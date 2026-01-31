@@ -95,8 +95,20 @@ function Settings() {
     }
   };
 
-  const removeLogo = (): void => {
-    setBusiness((prev) => ({ ...prev, logo: null }));
+  const removeLogo = async (): Promise<void> => {
+    const updatedBusiness = { ...business, logo: null };
+    setBusiness(updatedBusiness);
+
+    // Immediately save to database
+    try {
+      await saveBusiness(updatedBusiness);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to remove logo:', error);
+      // Revert on error
+      setBusiness(business);
+    }
   };
 
   const toggleShowLogo = (): void => {

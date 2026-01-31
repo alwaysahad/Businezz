@@ -106,9 +106,21 @@ function ViewInvoice() {
           text: `Invoice for ${invoice.customerName} - ${formatCurrency(totals.total, business.currency)}`,
           files: [pdfFile],
         });
+
+        // Automatically mark invoice as paid after successful share
+        if (invoice.status !== 'paid') {
+          const updatedInvoice: Invoice = { ...invoice, status: 'paid' };
+          await saveInvoice(updatedInvoice);
+        }
       } else {
         // Fallback: download the PDF if sharing is not supported
         downloadInvoicePDF(invoice, business, settings);
+
+        // Also mark as paid when downloading (fallback scenario)
+        if (invoice.status !== 'paid') {
+          const updatedInvoice: Invoice = { ...invoice, status: 'paid' };
+          await saveInvoice(updatedInvoice);
+        }
       }
     } catch (error) {
       // User cancelled or error occurred
@@ -117,7 +129,18 @@ function ViewInvoice() {
         console.error('Error sharing:', error);
         // Fallback to download
         downloadInvoicePDF(invoice, business, settings);
+
+        // Mark as paid even in error case (user still got the PDF)
+        if (invoice.status !== 'paid') {
+          try {
+            const updatedInvoice: Invoice = { ...invoice, status: 'paid' };
+            await saveInvoice(updatedInvoice);
+          } catch (saveError) {
+            console.error('Failed to update invoice status:', saveError);
+          }
+        }
       }
+      // If AbortError (user cancelled), don't mark as paid
     }
     setSharing(false);
   };
@@ -213,13 +236,27 @@ function ViewInvoice() {
         {/* Invoice Header */}
         <div className="bg-gradient-to-r from-teal-600 to-teal-700 px-8 py-6 text-white">
           <div className="flex flex-col sm:flex-row justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-display font-bold">{business.name || 'Your Business Name'}</h2>
-              {business.address && <p className="text-teal-100 mt-1 text-sm">{business.address}</p>}
-              {business.city && <p className="text-teal-100 text-sm">{business.city}{business.state && `, ${business.state}`}{business.pincode && ` - ${business.pincode}`}</p>}
-              {business.phone && <p className="text-teal-100 text-sm">Phone: {business.phone}</p>}
-              {business.email && <p className="text-teal-100 text-sm">Email: {business.email}</p>}
-              {business.taxId && <p className="text-teal-100 text-sm font-mono">{settings.taxLabel || 'Tax'} ID: {business.taxId}</p>}
+            <div className="flex items-start gap-4">
+              {/* Business Logo */}
+              {settings.showLogo && business.logo && (
+                <div className="flex-shrink-0">
+                  <img
+                    src={business.logo}
+                    alt={business.name || 'Business Logo'}
+                    className="w-16 h-16 object-contain bg-white rounded-lg p-2"
+                  />
+                </div>
+              )}
+
+              {/* Business Details */}
+              <div>
+                <h2 className="text-2xl font-display font-bold">{business.name || 'Your Business Name'}</h2>
+                {business.address && <p className="text-teal-100 mt-1 text-sm">{business.address}</p>}
+                {business.city && <p className="text-teal-100 text-sm">{business.city}{business.state && `, ${business.state}`}{business.pincode && ` - ${business.pincode}`}</p>}
+                {business.phone && <p className="text-teal-100 text-sm">Phone: {business.phone}</p>}
+                {business.email && <p className="text-teal-100 text-sm">Email: {business.email}</p>}
+                {business.taxId && <p className="text-teal-100 text-sm font-mono">{settings.taxLabel || 'Tax'} ID: {business.taxId}</p>}
+              </div>
             </div>
             <div className="text-right">
               <p className="text-teal-200 text-sm uppercase tracking-wide">Invoice</p>

@@ -1,253 +1,353 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceDB, customerDB, productDB, businessDB, settingsDB } from '../lib/database';
 import type { Invoice, Customer, Product, Business, Settings } from '../types';
 import { useSync } from '../contexts/SyncProvider';
 
+// Query keys for React Query cache management
+export const queryKeys = {
+    invoices: ['invoices'] as const,
+    invoice: (id: string) => ['invoices', id] as const,
+    customers: ['customers'] as const,
+    products: ['products'] as const,
+    business: ['business'] as const,
+    settings: ['settings'] as const,
+};
+
 export function useInvoices() {
     const { lastSyncTime } = useSync();
-    const [invoices, setInvoices] = useState<Invoice[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchInvoices = useCallback(async () => {
-        try {
-            setLoading(true);
-            // Depending on how big the data is, we might want to check if (loading) return?
-            // But we want to refresh in background if it's a "sync" update.
-            // So maybe "isRefetching" state?
-            // For now, simple setLoading(true) is fine, or we can avoid setting loading=true if we already have data.
-            // Let's set loading=true for now to be safe.
-            const data = await invoiceDB.getAll();
-            setInvoices(data);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching invoices:', err);
-            setError(err as Error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // Fetch all invoices with React Query
+    const { data: invoices = [], isLoading: loading, error } = useQuery({
+        queryKey: queryKeys.invoices,
+        queryFn: () => invoiceDB.getAll(),
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    });
 
-    useEffect(() => {
-        fetchInvoices();
-    }, [fetchInvoices, lastSyncTime]);
+    // Refetch when sync happens
+    if (lastSyncTime) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+    }
 
-    const saveInvoice = async (invoice: Invoice) => {
-        const saved = await invoiceDB.save(invoice);
-        setInvoices(prev => {
-            const index = prev.findIndex(i => i.id === saved.id);
-            if (index >= 0) {
-                const newInvoices = [...prev];
-                newInvoices[index] = saved;
-                return newInvoices;
+    // Save invoice mutation with optimistic update
+    const saveInvoiceMutation = useMutation({
+        mutationFn: (invoice: Invoice) => invoiceDB.save(invoice),
+        onMutate: async (newInvoice) => {
+            // Cancel outgoing refetches
+            await queryClient.cancelQueries({ queryKey: queryKeys.invoices });
+
+            // Snapshot previous value
+            const previousInvoices = queryClient.getQueryData<Invoice[]>(queryKeys.invoices);
+
+            // Optimistically update
+            queryClient.setQueryData<Invoice[]>(queryKeys.invoices, (old = []) => {
+                const index = old.findIndex(i => i.id === newInvoice.id);
+                if (index >= 0) {
+                    const updated = [...old];
+                    updated[index] = newInvoice;
+                    return updated;
+                }
+                return [newInvoice, ...old];
+            });
+
+            return { previousInvoices };
+        },
+        onError: (_err, _newInvoice, context) => {
+            // Rollback on error
+            if (context?.previousInvoices) {
+                queryClient.setQueryData(queryKeys.invoices, context.previousInvoices);
             }
-            return [saved, ...prev];
-        });
-        return saved;
-    };
+        },
+        onSettled: () => {
+            // Refetch to ensure consistency
+            queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+        },
+    });
 
-    const deleteInvoice = async (id: string) => {
-        await invoiceDB.delete(id);
-        setInvoices(prev => prev.filter(i => i.id !== id));
-    };
+    // Delete invoice mutation with optimistic update
+    const deleteInvoiceMutation = useMutation({
+        mutationFn: (id: string) => invoiceDB.delete(id),
+        onMutate: async (deletedId) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.invoices });
+            const previousInvoices = queryClient.getQueryData<Invoice[]>(queryKeys.invoices);
 
-    return { invoices, loading, error, refresh: fetchInvoices, saveInvoice, deleteInvoice };
+            queryClient.setQueryData<Invoice[]>(queryKeys.invoices, (old = []) =>
+                old.filter(i => i.id !== deletedId)
+            );
+
+            return { previousInvoices };
+        },
+        onError: (_err, _deletedId, context) => {
+            if (context?.previousInvoices) {
+                queryClient.setQueryData(queryKeys.invoices, context.previousInvoices);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+        },
+    });
+
+    const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+
+    return {
+        invoices,
+        loading,
+        error: error as Error | null,
+        refresh,
+        saveInvoice: saveInvoiceMutation.mutateAsync,
+        deleteInvoice: deleteInvoiceMutation.mutateAsync
+    };
 }
 
 export function useInvoice(id: string | undefined) {
     const { lastSyncTime } = useSync();
-    const [invoice, setInvoice] = useState<Invoice | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const queryClient = useQueryClient();
 
-    useEffect(() => {
-        if (!id) {
-            setLoading(false);
-            return;
-        }
-        const fetchInvoice = async () => {
-            try {
-                setLoading(true);
-                const data = await invoiceDB.getById(id);
-                setInvoice(data);
-                setError(null);
-            } catch (err) {
-                console.error('Error fetching invoice:', err);
-                setError(err as Error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchInvoice();
-    }, [id, lastSyncTime]);
+    const { data: invoice = null, isLoading: loading, error } = useQuery({
+        queryKey: queryKeys.invoice(id || ''),
+        queryFn: () => id ? invoiceDB.getById(id) : Promise.resolve(null),
+        enabled: !!id,
+        staleTime: 5 * 60 * 1000,
+    });
 
-    const saveInvoice = async (data: Invoice) => {
-        const saved = await invoiceDB.save(data);
-        setInvoice(saved);
-        return saved;
+    if (lastSyncTime && id) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.invoice(id) });
+    }
+
+    const saveInvoiceMutation = useMutation({
+        mutationFn: (data: Invoice) => invoiceDB.save(data),
+        onSuccess: (saved) => {
+            queryClient.setQueryData(queryKeys.invoice(saved.id), saved);
+            queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+        },
+    });
+
+    return {
+        invoice,
+        loading,
+        error: error as Error | null,
+        saveInvoice: saveInvoiceMutation.mutateAsync
     };
-
-    return { invoice, loading, error, saveInvoice };
 }
 
 export function useCustomers() {
     const { lastSyncTime } = useSync();
-    const [customers, setCustomers] = useState<Customer[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchCustomers = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await customerDB.getAll();
-            setCustomers(data);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching customers:', err);
-            setError(err as Error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const { data: customers = [], isLoading: loading, error } = useQuery({
+        queryKey: queryKeys.customers,
+        queryFn: () => customerDB.getAll(),
+        staleTime: 5 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers, lastSyncTime]);
+    if (lastSyncTime) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+    }
 
-    const saveCustomer = async (customer: Customer) => {
-        const saved = await customerDB.save(customer);
-        setCustomers(prev => {
-            const index = prev.findIndex(c => c.id === saved.id);
-            if (index >= 0) {
-                const newCustomers = [...prev];
-                newCustomers[index] = saved;
-                return newCustomers;
+    const saveCustomerMutation = useMutation({
+        mutationFn: (customer: Customer) => customerDB.save(customer),
+        onMutate: async (newCustomer) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.customers });
+            const previousCustomers = queryClient.getQueryData<Customer[]>(queryKeys.customers);
+
+            queryClient.setQueryData<Customer[]>(queryKeys.customers, (old = []) => {
+                const index = old.findIndex(c => c.id === newCustomer.id);
+                if (index >= 0) {
+                    const updated = [...old];
+                    updated[index] = newCustomer;
+                    return updated;
+                }
+                return [...old, newCustomer].sort((a, b) => a.name.localeCompare(b.name));
+            });
+
+            return { previousCustomers };
+        },
+        onError: (_err, _newCustomer, context) => {
+            if (context?.previousCustomers) {
+                queryClient.setQueryData(queryKeys.customers, context.previousCustomers);
             }
-            return [...prev, saved].sort((a, b) => a.name.localeCompare(b.name));
-        });
-        return saved;
-    };
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+        },
+    });
 
-    const deleteCustomer = async (id: string) => {
-        await customerDB.delete(id);
-        setCustomers(prev => prev.filter(c => c.id !== id));
-    };
+    const deleteCustomerMutation = useMutation({
+        mutationFn: (id: string) => customerDB.delete(id),
+        onMutate: async (deletedId) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.customers });
+            const previousCustomers = queryClient.getQueryData<Customer[]>(queryKeys.customers);
 
-    return { customers, loading, error, refresh: fetchCustomers, saveCustomer, deleteCustomer };
+            queryClient.setQueryData<Customer[]>(queryKeys.customers, (old = []) =>
+                old.filter(c => c.id !== deletedId)
+            );
+
+            return { previousCustomers };
+        },
+        onError: (_err, _deletedId, context) => {
+            if (context?.previousCustomers) {
+                queryClient.setQueryData(queryKeys.customers, context.previousCustomers);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+        },
+    });
+
+    const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.customers });
+
+    return {
+        customers,
+        loading,
+        error: error as Error | null,
+        refresh,
+        saveCustomer: saveCustomerMutation.mutateAsync,
+        deleteCustomer: deleteCustomerMutation.mutateAsync
+    };
 }
 
 export function useProducts() {
     const { lastSyncTime } = useSync();
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchProducts = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await productDB.getAll();
-            setProducts(data);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching products:', err);
-            setError(err as Error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    const { data: products = [], isLoading: loading, error } = useQuery({
+        queryKey: queryKeys.products,
+        queryFn: () => productDB.getAll(),
+        staleTime: 5 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts, lastSyncTime]);
+    if (lastSyncTime) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.products });
+    }
 
-    const saveProduct = async (product: Product) => {
-        const saved = await productDB.save(product);
-        setProducts(prev => {
-            const index = prev.findIndex(p => p.id === saved.id);
-            if (index >= 0) {
-                const newProducts = [...prev];
-                newProducts[index] = saved;
-                return newProducts;
+    const saveProductMutation = useMutation({
+        mutationFn: (product: Product) => productDB.save(product),
+        onMutate: async (newProduct) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.products });
+            const previousProducts = queryClient.getQueryData<Product[]>(queryKeys.products);
+
+            queryClient.setQueryData<Product[]>(queryKeys.products, (old = []) => {
+                const index = old.findIndex(p => p.id === newProduct.id);
+                if (index >= 0) {
+                    const updated = [...old];
+                    updated[index] = newProduct;
+                    return updated;
+                }
+                return [...old, newProduct].sort((a, b) => a.name.localeCompare(b.name));
+            });
+
+            return { previousProducts };
+        },
+        onError: (_err, _newProduct, context) => {
+            if (context?.previousProducts) {
+                queryClient.setQueryData(queryKeys.products, context.previousProducts);
             }
-            return [...prev, saved].sort((a, b) => a.name.localeCompare(b.name));
-        });
-        return saved;
-    };
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.products });
+        },
+    });
 
-    const deleteProduct = async (id: string) => {
-        await productDB.delete(id);
-        setProducts(prev => prev.filter(p => p.id !== id));
-    };
+    const deleteProductMutation = useMutation({
+        mutationFn: (id: string) => productDB.delete(id),
+        onMutate: async (deletedId) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.products });
+            const previousProducts = queryClient.getQueryData<Product[]>(queryKeys.products);
 
-    return { products, loading, error, refresh: fetchProducts, saveProduct, deleteProduct };
+            queryClient.setQueryData<Product[]>(queryKeys.products, (old = []) =>
+                old.filter(p => p.id !== deletedId)
+            );
+
+            return { previousProducts };
+        },
+        onError: (_err, _deletedId, context) => {
+            if (context?.previousProducts) {
+                queryClient.setQueryData(queryKeys.products, context.previousProducts);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.products });
+        },
+    });
+
+    const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.products });
+
+    return {
+        products,
+        loading,
+        error: error as Error | null,
+        refresh,
+        saveProduct: saveProductMutation.mutateAsync,
+        deleteProduct: deleteProductMutation.mutateAsync
+    };
 }
 
 export function useBusiness() {
     const { lastSyncTime } = useSync();
-    const [business, setBusiness] = useState<Business>({} as Business);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchBusiness = useCallback(async () => {
-        try {
-            setLoading(true);
+    const { data: business = {} as Business, isLoading: loading, error } = useQuery({
+        queryKey: queryKeys.business,
+        queryFn: async () => {
             const data = await businessDB.get();
-            if (data) {
-                setBusiness(data);
-            }
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching business:', err);
-            setError(err as Error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+            return data || {} as Business;
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        fetchBusiness();
-    }, [fetchBusiness, lastSyncTime]);
+    if (lastSyncTime) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.business });
+    }
 
-    const saveBusiness = async (data: Business) => {
-        const saved = await businessDB.save(data);
-        setBusiness(saved);
-        return saved;
+    const saveBusinessMutation = useMutation({
+        mutationFn: (data: Business) => businessDB.save(data),
+        onSuccess: (saved) => {
+            queryClient.setQueryData(queryKeys.business, saved);
+        },
+    });
+
+    const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.business });
+
+    return {
+        business,
+        loading,
+        error: error as Error | null,
+        refresh,
+        saveBusiness: saveBusinessMutation.mutateAsync
     };
-
-    return { business, loading, error, refresh: fetchBusiness, saveBusiness };
 }
 
 export function useSettings() {
     const { lastSyncTime } = useSync();
-    const [settings, setSettings] = useState<Settings>({} as Settings);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<Error | null>(null);
+    const queryClient = useQueryClient();
 
-    const fetchSettings = useCallback(async () => {
-        try {
-            setLoading(true);
+    const { data: settings = {} as Settings, isLoading: loading, error } = useQuery({
+        queryKey: queryKeys.settings,
+        queryFn: async () => {
             const data = await settingsDB.get();
-            if (data) {
-                setSettings(data);
-            }
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching settings:', err);
-            setError(err as Error);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+            return data || {} as Settings;
+        },
+        staleTime: 5 * 60 * 1000,
+    });
 
-    useEffect(() => {
-        fetchSettings();
-    }, [fetchSettings, lastSyncTime]);
+    if (lastSyncTime) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+    }
 
-    const saveSettings = async (data: Settings) => {
-        const saved = await settingsDB.save(data);
-        setSettings(saved);
-        return saved;
+    const saveSettingsMutation = useMutation({
+        mutationFn: (data: Settings) => settingsDB.save(data),
+        onSuccess: (saved) => {
+            queryClient.setQueryData(queryKeys.settings, saved);
+        },
+    });
+
+    const refresh = () => queryClient.invalidateQueries({ queryKey: queryKeys.settings });
+
+    return {
+        settings,
+        loading,
+        error: error as Error | null,
+        refresh,
+        saveSettings: saveSettingsMutation.mutateAsync
     };
-
-    return { settings, loading, error, refresh: fetchSettings, saveSettings };
 }
