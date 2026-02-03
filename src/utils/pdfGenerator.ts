@@ -81,10 +81,13 @@ export const generateInvoicePDF = (
   // Add logo if available
   if (settings.showLogo && business.logo) {
     try {
+      console.log('Adding logo to PDF:', { showLogo: settings.showLogo, hasLogo: !!business.logo });
       doc.addImage(business.logo, 'PNG', margin, y, 20, 20);
     } catch (error) {
       console.error('Error adding logo to PDF:', error);
     }
+  } else {
+    console.log('Logo not added to PDF:', { showLogo: settings.showLogo, hasLogo: !!business.logo });
   }
 
   // Business Details - Right aligned
@@ -336,11 +339,14 @@ export const generateInvoicePDF = (
   // Add signature image if available
   if (business.signature) {
     try {
+      console.log('Adding signature to PDF:', { hasSignature: !!business.signature });
       doc.addImage(business.signature, 'PNG', rightColX + 15, sigY - 10, 30, 15);
       sigY += 10;
     } catch (error) {
       console.error('Failed to add signature to PDF:', error);
     }
+  } else {
+    console.log('Signature not added to PDF:', { hasSignature: !!business.signature });
   }
 
   doc.setLineWidth(0.3);

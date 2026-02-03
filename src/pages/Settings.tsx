@@ -38,7 +38,10 @@ function Settings() {
   }, [businessData]);
 
   useEffect(() => {
-    if (settingsData && Object.keys(settingsData).length > 0) setSettings(settingsData);
+    if (settingsData && Object.keys(settingsData).length > 0) {
+      // Set showLogo to true by default, but allow settingsData to override
+      setSettings({ ...settingsData, showLogo: settingsData.showLogo ?? true });
+    }
   }, [settingsData]);
 
   const [saved, setSaved] = useState(false);
@@ -78,8 +81,23 @@ function Settings() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setBusiness((prev) => ({ ...prev, logo: reader.result as string }));
+      reader.onloadend = async () => {
+        const updatedBusiness = { ...business, logo: reader.result as string };
+        setBusiness(updatedBusiness);
+
+        // Auto-save to database
+        setIsSaving(true);
+        try {
+          await saveBusiness(updatedBusiness);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        } catch (error) {
+          console.error('Failed to save logo:', error);
+          // Revert on error
+          setBusiness(business);
+        } finally {
+          setIsSaving(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -105,8 +123,23 @@ function Settings() {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setBusiness((prev) => ({ ...prev, signature: reader.result as string }));
+      reader.onloadend = async () => {
+        const updatedBusiness = { ...business, signature: reader.result as string };
+        setBusiness(updatedBusiness);
+
+        // Auto-save to database
+        setIsSaving(true);
+        try {
+          await saveBusiness(updatedBusiness);
+          setSaved(true);
+          setTimeout(() => setSaved(false), 2000);
+        } catch (error) {
+          console.error('Failed to save signature:', error);
+          // Revert on error
+          setBusiness(business);
+        } finally {
+          setIsSaving(false);
+        }
       };
       reader.readAsDataURL(file);
     }
