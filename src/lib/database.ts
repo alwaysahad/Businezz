@@ -342,6 +342,7 @@ function mapBusinessFromDB(data: Record<string, unknown>): Business {
     email: data.email as string,
     taxId: data.tax_id as string,
     logo: data.logo as string | null,
+    signature: data.signature as string | null,
     currency: data.currency as string,
     taxRate: data.tax_rate as number,
   };
@@ -360,6 +361,7 @@ function mapBusinessToDB(business: Business): Record<string, unknown> {
     email: business.email,
     tax_id: business.taxId,
     logo: business.logo,
+    signature: business.signature,
     currency: business.currency,
     tax_rate: business.taxRate,
     updated_at: new Date().toISOString(),
