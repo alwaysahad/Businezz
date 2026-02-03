@@ -85,6 +85,13 @@ function Settings() {
         const updatedBusiness = { ...business, logo: reader.result as string };
         setBusiness(updatedBusiness);
 
+        // Check if business has required fields before saving
+        if (!business.name || !business.email) {
+          alert('Please fill in your business name and email before uploading a logo.');
+          setBusiness(business); // Revert the logo
+          return;
+        }
+
         // Auto-save to database
         setIsSaving(true);
         try {
@@ -93,6 +100,7 @@ function Settings() {
           setTimeout(() => setSaved(false), 2000);
         } catch (error) {
           console.error('Failed to save logo:', error);
+          alert('Failed to save logo. Please try again.');
           // Revert on error
           setBusiness(business);
         } finally {
@@ -127,14 +135,29 @@ function Settings() {
         const updatedBusiness = { ...business, signature: reader.result as string };
         setBusiness(updatedBusiness);
 
+        // Check if business has required fields before saving
+        if (!business.name || !business.email) {
+          alert('Please fill in your business name and email before uploading a signature.');
+          setBusiness(business); // Revert the signature
+          return;
+        }
+
         // Auto-save to database
         setIsSaving(true);
         try {
+          console.log('Attempting to save signature. Business data:', {
+            hasName: !!business.name,
+            hasEmail: !!business.email,
+            hasSignature: !!updatedBusiness.signature,
+            businessKeys: Object.keys(updatedBusiness)
+          });
           await saveBusiness(updatedBusiness);
           setSaved(true);
           setTimeout(() => setSaved(false), 2000);
         } catch (error) {
-          console.error('Failed to save signature:', error);
+          console.error('Failed to save signature. Full error:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          alert(`Failed to save signature: ${errorMessage}\n\nPlease check the browser console for details.`);
           // Revert on error
           setBusiness(business);
         } finally {
