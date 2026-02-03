@@ -3,6 +3,7 @@ export interface InvoiceItem {
   id: string;
   name: string;
   quantity: number;
+  unit?: string;
   price: number;
 }
 
@@ -56,8 +57,13 @@ export interface Business {
   email: string;
   taxId: string;
   logo: string | null;
+  signature: string | null;
   currency: string;
   taxRate: number;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  branchName?: string;
 }
 
 // Settings Types
@@ -77,6 +83,7 @@ export interface InvoiceTotals {
   discountAmount: number;
   taxableAmount: number;
   taxAmount: number;
+  roundOff: number;
   total: number;
 }
 

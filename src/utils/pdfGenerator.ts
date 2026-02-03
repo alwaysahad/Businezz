@@ -14,7 +14,7 @@ declare module 'jspdf' {
 interface AutoTableOptions {
   startY?: number;
   head?: string[][];
-  body?: string[][];
+  body?: (string | number)[][];
   margin?: { left?: number; right?: number; top?: number; bottom?: number };
   tableWidth?: number | 'auto';
   styles?: {
@@ -56,141 +56,151 @@ export const generateInvoicePDF = (
 ): jsPDF => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
-  let y = 20;
+  let y = 15;
 
-  const taxLabel = settings.taxLabel || 'Tax';
   const totals = calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
   const currency = business.currency || 'Rs.';
 
-  // Add logo if available and showLogo is enabled
-  if (settings.showLogo && business.logo) {
-    try {
-      // Add logo image (20x20 size)
-      doc.addImage(business.logo, 'PNG', margin, y, 20, 20);
-
-      // Business Name - Bold Header (next to logo)
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text(business.name || 'Business Name', margin + 25, y + 7);
-
-      // Invoice Number - Right aligned
-      doc.setFontSize(12);
-      doc.text('INVOICE', pageWidth - margin, y + 7, { align: 'right' });
-
-      y += 12;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(invoice.invoiceNumber, pageWidth - margin, y, { align: 'right' });
-
-      y += 10;
-    } catch (error) {
-      console.error('Error adding logo to PDF:', error);
-      // Fallback to text-only header
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text(business.name || 'Business Name', margin, y);
-
-      doc.setFontSize(12);
-      doc.text('INVOICE', pageWidth - margin, y, { align: 'right' });
-
-      y += 7;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text(invoice.invoiceNumber, pageWidth - margin, y, { align: 'right' });
-
-      y += 5;
-    }
-  } else {
-    // No logo - original layout
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(business.name || 'Business Name', margin, y);
-
-    // Invoice Number - Right aligned
-    doc.setFontSize(12);
-    doc.text('INVOICE', pageWidth - margin, y, { align: 'right' });
-
-    y += 7;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.invoiceNumber, pageWidth - margin, y, { align: 'right' });
-
-    y += 5;
-  }
-
-  // Business Details
-  doc.setFontSize(9);
-  const businessLines: string[] = [];
-  if (business.address) businessLines.push(business.address);
-  if (business.city || business.state) {
-    businessLines.push(`${business.city || ''}${business.city && business.state ? ', ' : ''}${business.state || ''} ${business.pincode || ''}`.trim());
-  }
-  if (business.phone) businessLines.push(`Phone: ${business.phone}`);
-  if (business.email) businessLines.push(`Email: ${business.email}`);
-  if (business.taxId) businessLines.push(`${taxLabel} ID: ${business.taxId}`);
-
-  businessLines.forEach((line) => {
-    doc.text(line, margin, y);
-    y += 4;
-  });
-
-  // Horizontal line
-  y += 5;
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pageWidth - margin, y);
+  // Tax Invoice Title
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Tax Invoice', pageWidth / 2, y, { align: 'center' });
   y += 10;
 
-  // Invoice Details - Two columns
-  doc.setFont('helvetica', 'bold');
-  doc.text('Bill To:', margin, y);
-  doc.text('Invoice Details:', pageWidth / 2 + 10, y);
+  // Draw top border
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
 
-  y += 6;
+  // Header with logo and business details
+  const headerStartY = y;
+
+  // Add logo if available
+  if (settings.showLogo && business.logo) {
+    try {
+      doc.addImage(business.logo, 'PNG', margin, y, 20, 20);
+    } catch (error) {
+      console.error('Error adding logo to PDF:', error);
+    }
+  }
+
+  // Business Details - Right aligned
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  const businessNameY = y + 5;
+  doc.text(business.name || 'Business Name', pageWidth - margin, businessNameY, { align: 'right' });
+
+  y += 8;
+  doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
 
-  // Customer details (left)
-  const customerY = y;
-  doc.text(invoice.customerName || 'Customer', margin, customerY);
-  let custY = customerY + 4;
+  if (business.address) {
+    doc.text(business.address, pageWidth - margin, y, { align: 'right' });
+    y += 4;
+  }
+  if (business.city || business.state) {
+    const cityLine = `${business.city || ''}${business.city && business.state ? ', ' : ''}${business.state || ''} ${business.pincode || ''}`.trim();
+    doc.text(cityLine, pageWidth - margin, y, { align: 'right' });
+    y += 4;
+  }
+  if (business.phone) {
+    doc.text(`Phone no.: ${business.phone}`, pageWidth - margin, y, { align: 'right' });
+    y += 4;
+  }
+  if (business.email) {
+    doc.text(`Email: ${business.email}`, pageWidth - margin, y, { align: 'right' });
+    y += 4;
+  }
+  if (business.taxId) {
+    doc.text(`GSTIN: ${business.taxId}, State: ${business.state || '09-Uttar Pradesh'}`, pageWidth - margin, y, { align: 'right' });
+    y += 4;
+  }
+
+  y = Math.max(y, headerStartY + 30);
+  y += 5;
+
+  // Horizontal line
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
+
+  // Bill To & Invoice Details - Two columns
+  const leftColX = margin;
+  const rightColX = pageWidth / 2 + 5;
+  const sectionY = y;
+
+  // Bill To
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Bill To', leftColX, sectionY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  let leftY = sectionY + 5;
+  doc.text(invoice.customerName || 'Customer', leftColX, leftY);
+  leftY += 4;
+
   if (invoice.customerAddress) {
-    const addrLines = doc.splitTextToSize(invoice.customerAddress, contentWidth / 2 - 20);
-    doc.text(addrLines, margin, custY);
-    custY += addrLines.length * 4;
+    const addrLines = doc.splitTextToSize(invoice.customerAddress, (pageWidth / 2) - margin - 10);
+    doc.text(addrLines, leftColX, leftY);
+    leftY += addrLines.length * 4;
   }
-  if (invoice.customerPhone) {
-    doc.text(`Phone: ${invoice.customerPhone}`, margin, custY);
-    custY += 4;
-  }
-  if (invoice.customerEmail) {
-    doc.text(`Email: ${invoice.customerEmail}`, margin, custY);
-  }
+  doc.text(`State: ${business.state || '09-Uttar Pradesh'}`, leftColX, leftY);
 
-  // Invoice details (right)
-  const detailX = pageWidth / 2 + 10;
-  doc.text(`Date: ${formatDate(invoice.date)}`, detailX, customerY);
+  // Invoice Details
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('Invoice Details', rightColX, sectionY);
 
-  y = Math.max(custY, customerY + 12) + 10;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  let rightY = sectionY + 5;
+  doc.text(`Invoice No.: ${invoice.invoiceNumber}`, rightColX, rightY);
+  rightY += 4;
+  doc.text(`Date: ${formatDate(invoice.date)}`, rightColX, rightY);
+  rightY += 4;
+  doc.text(`Place of Supply: ${business.state || '09-Uttar Pradesh'}`, rightColX, rightY);
 
-  // Items table
-  const tableData = invoice.items.map((item, index) => [
-    (index + 1).toString(),
-    item.name,
-    item.quantity.toString(),
-    formatPDFCurrency(item.price, currency),
-    formatPDFCurrency(item.quantity * item.price, currency),
-  ]);
+  y = Math.max(leftY, rightY) + 8;
+
+  // Horizontal line
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 5;
+
+  // Items table with new columns
+  const tableData = invoice.items.map((item, index) => {
+    const itemTotal = item.quantity * item.price;
+    const itemDiscount = (itemTotal * invoice.discount) / 100;
+    const itemTaxable = itemTotal - itemDiscount;
+    const itemGst = (itemTaxable * invoice.taxRate) / 100;
+    const itemAmount = itemTaxable + itemGst;
+
+    return [
+      (index + 1).toString(),
+      item.name,
+      item.quantity.toString(),
+      item.unit || 'PCS',
+      formatPDFCurrency(item.price, currency),
+      `${formatPDFCurrency(itemDiscount, currency)}\n(${invoice.discount}%)`,
+      formatPDFCurrency(itemTaxable, currency),
+      `${formatPDFCurrency(itemGst, currency)}\n(${invoice.taxRate.toFixed(1)}%)`,
+      formatPDFCurrency(itemAmount, currency),
+    ];
+  });
 
   doc.autoTable({
     startY: y,
-    head: [['#', 'Description', 'Qty', 'Rate', 'Amount']],
+    head: [['#', 'Item name', 'Quantity', 'Unit', 'Price/Unit', 'Discount', 'Taxable amount', 'GST', 'Amount']],
     body: tableData,
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
     styles: {
-      fontSize: 9,
-      cellPadding: 4,
+      fontSize: 7,
+      cellPadding: 2,
       lineColor: [0, 0, 0],
       lineWidth: 0.1,
       textColor: [0, 0, 0],
@@ -205,79 +215,139 @@ export const generateInvoicePDF = (
       fillColor: [255, 255, 255],
     },
     columnStyles: {
-      0: { cellWidth: 12, halign: 'center' },
+      0: { cellWidth: 10, halign: 'center' },
       1: { cellWidth: 'auto' },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 30, halign: 'right' },
-      4: { cellWidth: 35, halign: 'right' },
+      2: { cellWidth: 15, halign: 'center' },
+      3: { cellWidth: 12, halign: 'center' },
+      4: { cellWidth: 20, halign: 'right' },
+      5: { cellWidth: 20, halign: 'right' },
+      6: { cellWidth: 22, halign: 'right' },
+      7: { cellWidth: 20, halign: 'right' },
+      8: { cellWidth: 22, halign: 'right' },
     },
   });
 
-  y = doc.lastAutoTable.finalY + 10;
+  y = doc.lastAutoTable.finalY + 5;
 
-  // Totals section - right aligned
-  const totalsX = pageWidth - margin - 80;
-  const valueX = pageWidth - margin;
+  // Horizontal line
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
 
-  doc.setFontSize(9);
+  // Tax Summary and Amounts - Two columns
+  const taxTableY = y;
 
-  // Subtotal
-  doc.text('Subtotal:', totalsX, y);
-  doc.text(formatPDFCurrency(totals.subtotal, currency), valueX, y, { align: 'right' });
-
-  // Discount
-  if (invoice.discount > 0) {
-    y += 6;
-    doc.text(`Discount (${invoice.discount}%):`, totalsX, y);
-    doc.text(`-${formatPDFCurrency(totals.discountAmount, currency)}`, valueX, y, { align: 'right' });
-  }
-
-  // Tax
-  if (invoice.taxRate > 0) {
-    y += 6;
-    doc.text(`${taxLabel} (${invoice.taxRate}%):`, totalsX, y);
-    doc.text(formatPDFCurrency(totals.taxAmount, currency), valueX, y, { align: 'right' });
-  }
-
-  // Total with line
-  y += 4;
-  doc.setLineWidth(0.3);
-  doc.line(totalsX - 5, y, valueX, y);
-
-  y += 6;
+  // Tax breakdown table (left)
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(11);
-  doc.text('TOTAL:', totalsX, y);
-  doc.text(formatPDFCurrency(totals.total, currency), valueX, y, { align: 'right' });
-
-  // Amount in words
-  y += 15;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.text('Amount in Words:', margin, y);
-  y += 5;
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${numberToWords(Math.floor(totals.total))} Only`, margin, y);
-
-  // Notes
-  if (invoice.notes) {
-    y += 12;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.text('Notes:', margin, y);
-    y += 5;
-    const notesLines = doc.splitTextToSize(invoice.notes, contentWidth);
-    doc.text(notesLines, margin, y);
-  }
-
-  // Footer line
-  const footerY = doc.internal.pageSize.getHeight() - 20;
-  doc.setLineWidth(0.3);
-  doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
-
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('Thank you for your business!', pageWidth / 2, footerY, { align: 'center' });
+  doc.text('Tax type', leftColX, taxTableY);
+  doc.text('Taxable amount', leftColX + 35, taxTableY, { align: 'right' });
+  doc.text('Rate', leftColX + 50, taxTableY, { align: 'center' });
+  doc.text('Tax amount', leftColX + 70, taxTableY, { align: 'right' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  let taxY = taxTableY + 5;
+
+  const sgstRate = invoice.taxRate / 2;
+  const sgstAmount = totals.taxAmount / 2;
+
+  doc.text('SGST', leftColX, taxY);
+  doc.text(formatPDFCurrency(totals.taxableAmount, currency), leftColX + 35, taxY, { align: 'right' });
+  doc.text(`${sgstRate.toFixed(1)}%`, leftColX + 50, taxY, { align: 'center' });
+  doc.text(formatPDFCurrency(sgstAmount, currency), leftColX + 70, taxY, { align: 'right' });
+  taxY += 5;
+
+  doc.text('CGST', leftColX, taxY);
+  doc.text(formatPDFCurrency(totals.taxableAmount, currency), leftColX + 35, taxY, { align: 'right' });
+  doc.text(`${sgstRate.toFixed(1)}%`, leftColX + 50, taxY, { align: 'center' });
+  doc.text(formatPDFCurrency(sgstAmount, currency), leftColX + 70, taxY, { align: 'right' });
+
+  // Amounts (right)
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('Amounts', rightColX, taxTableY);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  let amountY = taxTableY + 5;
+
+  doc.text('Sub Total', rightColX, amountY);
+  doc.text(formatPDFCurrency(totals.taxableAmount, currency), pageWidth - margin, amountY, { align: 'right' });
+  amountY += 5;
+
+  doc.text('Round off', rightColX, amountY);
+  const roundOffText = `${totals.roundOff >= 0 ? '' : '- '}${formatPDFCurrency(Math.abs(totals.roundOff), currency)}`;
+  doc.text(roundOffText, pageWidth - margin, amountY, { align: 'right' });
+  amountY += 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('Total', rightColX, amountY);
+  doc.text(formatPDFCurrency(totals.total, currency), pageWidth - margin, amountY, { align: 'right' });
+
+  y = Math.max(taxY, amountY) + 8;
+
+  // Horizontal line
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 8;
+
+  // Footer section - Two columns
+  const footerStartY = y;
+
+  // Left column - Amount in words and Terms
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('Invoice Amount In Words', leftColX, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  const amountWords = `${numberToWords(Math.floor(totals.total))} Rupees only`;
+  const wordsLines = doc.splitTextToSize(amountWords, (pageWidth / 2) - margin - 10);
+  doc.text(wordsLines, leftColX, y);
+  y += wordsLines.length * 4 + 5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text('Terms and conditions', leftColX, y);
+  y += 5;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+
+
+  if (invoice.notes) {
+    y += 2;
+    const notesLines = doc.splitTextToSize(invoice.notes, (pageWidth / 2) - margin - 10);
+    doc.text(notesLines, leftColX, y);
+  }
+
+  // Right column - Signature
+  let sigY = footerStartY;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text(`For: ${business.name || 'Your Business Name'}`, rightColX, sigY);
+
+  // Signature line
+  sigY = pageHeight - 40;
+
+  // Add signature image if available
+  if (business.signature) {
+    try {
+      doc.addImage(business.signature, 'PNG', rightColX + 15, sigY - 10, 30, 15);
+      sigY += 10;
+    } catch (error) {
+      console.error('Failed to add signature to PDF:', error);
+    }
+  }
+
+  doc.setLineWidth(0.3);
+  doc.line(rightColX + 10, sigY, rightColX + 50, sigY);
+  sigY += 4;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Authorized Signatory', rightColX + 30, sigY, { align: 'center' });
 
   return doc;
 };

@@ -126,7 +126,7 @@ function CreateInvoice() {
   const addItem = (): void => {
     setInvoice(prev => ({
       ...prev,
-      items: [...prev.items, { id: generateId(), name: '', quantity: 1, price: 0 }],
+      items: [...prev.items, { id: generateId(), name: '', quantity: 1, unit: 'PCS', price: 0 }],
     }));
   };
 
@@ -156,7 +156,7 @@ function CreateInvoice() {
       ...prev,
       items: prev.items.map(item =>
         item.id === itemId
-          ? { ...item, name: product.name, price: product.price }
+          ? { ...item, name: product.name, price: product.price, unit: product.unit || 'PCS' }
           : item
       ),
     }));
@@ -371,8 +371,9 @@ function CreateInvoice() {
             {/* Table Header */}
             <div className="hidden sm:grid sm:grid-cols-12 gap-2 pb-2 border-b border-midnight-600 mb-2">
               <div className="col-span-1 text-midnight-400 text-xs font-medium">#</div>
-              <div className="col-span-5 text-midnight-400 text-xs font-medium">Item Name</div>
+              <div className="col-span-4 text-midnight-400 text-xs font-medium">Item Name</div>
               <div className="col-span-2 text-midnight-400 text-xs font-medium text-center">Qty</div>
+              <div className="col-span-1 text-midnight-400 text-xs font-medium text-center">Unit</div>
               <div className="col-span-2 text-midnight-400 text-xs font-medium text-right">Price</div>
               <div className="col-span-2 text-midnight-400 text-xs font-medium text-right">Amount</div>
             </div>
@@ -390,7 +391,7 @@ function CreateInvoice() {
                   </div>
 
                   {/* Item Name */}
-                  <div className="sm:col-span-5 relative">
+                  <div className="sm:col-span-4 relative">
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Item Name</label>
                     <input
                       type="text"
@@ -438,6 +439,18 @@ function CreateInvoice() {
                       value={item.quantity}
                       onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)}
                       className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-center focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all"
+                    />
+                  </div>
+
+                  {/* Unit */}
+                  <div className="sm:col-span-1">
+                    <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Unit</label>
+                    <input
+                      type="text"
+                      value={item.unit || 'PCS'}
+                      onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
+                      className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-center focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all"
+                      placeholder="PCS"
                     />
                   </div>
 

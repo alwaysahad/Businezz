@@ -64,14 +64,17 @@ export const calculateInvoiceTotals = (
   const discountAmount = (subtotal * (parseFloat(String(discount)) || 0)) / 100;
   const taxableAmount = subtotal - discountAmount;
   const taxAmount = (taxableAmount * (parseFloat(String(taxRate)) || 0)) / 100;
-  const total = taxableAmount + taxAmount;
+  const exactTotal = taxableAmount + taxAmount;
+  const roundedTotal = Math.round(exactTotal);
+  const roundOff = roundedTotal - exactTotal;
 
   return {
     subtotal,
     discountAmount,
     taxableAmount,
     taxAmount,
-    total,
+    roundOff,
+    total: roundedTotal,
   };
 };
 

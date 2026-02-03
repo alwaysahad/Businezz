@@ -12,10 +12,6 @@ import {
 import type { Business, Settings as SettingsType } from '../types';
 import { useBusiness, useSettings } from '../hooks/useData';
 
-interface Currency {
-  symbol: string;
-  name: string;
-}
 
 interface Tab {
   id: 'business' | 'invoice';
@@ -23,13 +19,7 @@ interface Tab {
   icon: LucideIcon;
 }
 
-const CURRENCIES: Currency[] = [
-  { symbol: '₹', name: 'Indian Rupee (INR)' },
-  { symbol: '$', name: 'US Dollar (USD)' },
-  { symbol: '€', name: 'Euro (EUR)' },
-  { symbol: '£', name: 'British Pound (GBP)' },
-  { symbol: '¥', name: 'Japanese Yen (JPY)' },
-];
+
 
 const TABS: Tab[] = [
   { id: 'business', label: 'Business Profile', icon: Building2 },
@@ -106,6 +96,33 @@ function Settings() {
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
       console.error('Failed to remove logo:', error);
+      // Revert on error
+      setBusiness(business);
+    }
+  };
+
+  const handleSignatureUpload = (e: ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setBusiness((prev) => ({ ...prev, signature: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeSignature = async (): Promise<void> => {
+    const updatedBusiness = { ...business, signature: null };
+    setBusiness(updatedBusiness);
+
+    // Immediately save to database
+    try {
+      await saveBusiness(updatedBusiness);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to remove signature:', error);
       // Revert on error
       setBusiness(business);
     }
@@ -283,6 +300,8 @@ function Settings() {
                 </div>
               </div>
             </div>
+
+
           </div>
 
           {/* Logo & Currency */}
@@ -311,24 +330,30 @@ function Settings() {
             </div>
 
             <div className="glass rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-white mb-4">Currency</h2>
-              <div className="space-y-2">
-                {CURRENCIES.map((currency) => (
+              <h2 className="text-lg font-semibold text-white mb-4">Signature</h2>
+              <p className="text-midnight-400 text-sm mb-4">Upload your signature to appear on invoices</p>
+
+              {business.signature ? (
+                <div className="relative">
+                  <img src={business.signature} alt="Signature" className="w-full h-32 object-contain bg-white rounded-xl" />
                   <button
-                    key={currency.symbol}
-                    onClick={() => setBusiness((prev) => ({ ...prev, currency: currency.symbol }))}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${business.currency === currency.symbol
-                      ? 'bg-teal-500/20 text-teal-400'
-                      : 'text-midnight-300 hover:bg-midnight-700'
-                      }`}
+                    onClick={removeSignature}
+                    className="absolute top-2 right-2 p-2 bg-coral-500 text-white rounded-lg hover:bg-coral-600 transition-colors"
                   >
-                    <span className="text-xl font-mono">{currency.symbol}</span>
-                    <span className="text-sm">{currency.name}</span>
-                    {business.currency === currency.symbol && <Check className="w-4 h-4 ml-auto" />}
+                    <Trash2 className="w-4 h-4" />
                   </button>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-midnight-600 rounded-xl cursor-pointer hover:border-teal-500/50 transition-colors">
+                  <Upload className="w-8 h-8 text-midnight-500 mb-2" />
+                  <span className="text-midnight-400 text-sm">Upload signature</span>
+                  <span className="text-midnight-500 text-xs mt-1">PNG, JPG up to 2MB</span>
+                  <input type="file" accept="image/*" onChange={handleSignatureUpload} className="hidden" />
+                </label>
+              )}
             </div>
+
+
           </div>
         </div>
       )}
