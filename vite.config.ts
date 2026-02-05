@@ -24,6 +24,14 @@ export default defineConfig({
     // Enable source maps for better debugging
     sourcemap: false,
   },
+  worker: {
+    format: 'es',
+    rollupOptions: {
+      output: {
+        format: 'es',
+      },
+    },
+  },
   // Optimize dev server
   server: {
     port: 5173,
