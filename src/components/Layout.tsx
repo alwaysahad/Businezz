@@ -30,7 +30,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/invoices', label: 'Invoices', icon: FileText },
   { path: '/products', label: 'Products', icon: Package },
   { path: '/customers', label: 'Customers', icon: Users },
@@ -81,7 +81,7 @@ function Layout({ children }: LayoutProps) {
   }, [sidebarCollapsed]);
 
   const isActive = (path: string): boolean => {
-    if (path === '/') return location.pathname === '/';
+    if (path === '/dashboard') return location.pathname === '/dashboard';
     return location.pathname.startsWith(path);
   };
 
