@@ -146,10 +146,10 @@ function Products() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-400 pointer-events-none" />
+        <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-400 pointer-events-none transition-opacity duration-200 ${searchQuery ? 'opacity-0' : 'opacity-100'}`} />
         <input
           type="text"
-          placeholder="Search products..."
+          placeholder=""
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="input-field pl-11"

@@ -79,13 +79,13 @@ function Signup() {
                         <div>
                             <label className="input-label">Email Address</label>
                             <div className="relative">
-                                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-500 pointer-events-none" />
+                                <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-500 pointer-events-none transition-opacity duration-200 ${email ? 'opacity-0' : 'opacity-100'}`} />
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     className="input-field pl-11"
-                                    placeholder="you@example.com"
+                                    placeholder=""
                                     required
                                     autoComplete="email"
                                 />
@@ -95,13 +95,13 @@ function Signup() {
                         <div>
                             <label className="input-label">Password</label>
                             <div className="relative">
-                                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-500 pointer-events-none" />
+                                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-500 pointer-events-none transition-opacity duration-200 ${password ? 'opacity-0' : 'opacity-100'}`} />
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="input-field pl-11"
-                                    placeholder="••••••••"
+                                    placeholder=""
                                     required
                                     autoComplete="new-password"
                                     minLength={6}
@@ -113,13 +113,13 @@ function Signup() {
                         <div>
                             <label className="input-label">Confirm Password</label>
                             <div className="relative">
-                                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-500 pointer-events-none" />
+                                <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-500 pointer-events-none transition-opacity duration-200 ${confirmPassword ? 'opacity-0' : 'opacity-100'}`} />
                                 <input
                                     type="password"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     className="input-field pl-11"
-                                    placeholder="••••••••"
+                                    placeholder=""
                                     required
                                     autoComplete="new-password"
                                 />

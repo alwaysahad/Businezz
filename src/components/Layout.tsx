@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,6 +15,8 @@ import {
   Cloud,
   CloudOff,
   CheckCircle,
+  ChevronLeft,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,12 +42,43 @@ interface LayoutProps {
 }
 
 function Layout({ children }: LayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    // Load desktop sidebar state from localStorage
+    const saved = localStorage.getItem('sidebarCollapsed');
+    return saved === 'true';
+  });
+  const [userSidebarPreference, setUserSidebarPreference] = useState<boolean | null>(null);
+
+  // Auto-collapse sidebar on invoice creation/edit pages
+  useEffect(() => {
+    const isInvoicePage = location.pathname === '/invoices/new' || location.pathname.startsWith('/invoices/edit/');
+
+    if (isInvoicePage) {
+      // Save user's current preference if not already saved
+      if (userSidebarPreference === null) {
+        setUserSidebarPreference(sidebarCollapsed);
+      }
+      // Auto-collapse sidebar
+      setSidebarCollapsed(true);
+    } else {
+      // Restore user's preference when leaving invoice pages
+      if (userSidebarPreference !== null) {
+        setSidebarCollapsed(userSidebarPreference);
+        setUserSidebarPreference(null);
+      }
+    }
+  }, [location.pathname]);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { syncStatus } = useSync();
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   const isActive = (path: string): boolean => {
     if (path === '/') return location.pathname === '/';
@@ -55,6 +88,10 @@ function Layout({ children }: LayoutProps) {
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
+  };
+
+  const toggleDesktopSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
   };
 
   return (
@@ -69,37 +106,39 @@ function Layout({ children }: LayoutProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-72 transform transition-transform duration-300 ease-in-out lg:transform-none ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          }`}
+        className={`fixed lg:static inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out group ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          } ${sidebarCollapsed ? 'lg:w-24' : 'w-72'}`}
       >
-        <div className="h-full flex flex-col glass rounded-r-2xl lg:rounded-2xl m-0 lg:m-4">
+        <div className="h-full flex flex-col glass rounded-r-2xl lg:rounded-2xl m-0 lg:m-4 relative">
           {/* Logo */}
-          <div className="p-6 border-b border-white/10">
-            <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-glow">
-                <Receipt className="w-5 h-5 text-white" />
+          <div className={`p-6 border-b border-white/10 transition-all duration-300 ${sidebarCollapsed ? 'lg:p-4 lg:pb-4' : ''}`}>
+            <Link to="/" className={`flex items-center ${sidebarCollapsed ? 'lg:justify-center' : 'gap-3'}`}>
+              <div className={`rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-glow transition-all duration-300 ${sidebarCollapsed ? 'lg:w-12 lg:h-12' : 'w-10 h-10'}`}>
+                <Receipt className={`text-white transition-all duration-300 ${sidebarCollapsed ? 'lg:w-6 lg:h-6' : 'w-5 h-5'}`} />
               </div>
-              <div>
-                <h1 className="text-xl font-display font-bold text-white">Businezz</h1>
-                <p className="text-xs text-midnight-400">Smart Billing</p>
+              <div className={`transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                <h1 className="text-xl font-display font-bold text-white whitespace-nowrap">Businezz</h1>
+                <p className="text-xs text-midnight-400 whitespace-nowrap">Smart Billing</p>
               </div>
             </Link>
           </div>
 
           {/* New Invoice Button */}
-          <div className="p-4">
+          <div className={`p-4 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-3 lg:py-4' : ''}`}>
             <Link
               to="/invoices/new"
-              className="flex items-center justify-center gap-2 w-full btn-primary py-3"
+              className={`flex items-center justify-center gap-2 btn-primary rounded-xl transition-all duration-300 hover:shadow-glow ${sidebarCollapsed ? 'lg:w-12 lg:h-12 lg:p-0 lg:mx-auto' : 'w-full py-3'}
+                }`}
               onClick={() => setSidebarOpen(false)}
+              title={sidebarCollapsed ? 'New Invoice' : ''}
             >
-              <Plus className="w-5 h-5" />
-              <span>New Invoice</span>
+              <Plus className={`text-white transition-all duration-300 ${sidebarCollapsed ? 'lg:w-6 lg:h-6' : 'w-5 h-5'}`} />
+              <span className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>New Invoice</span>
             </Link>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
+          <nav className={`flex-1 py-2 space-y-2 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:px-3' : 'px-4'}`}>
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -108,15 +147,18 @@ function Layout({ children }: LayoutProps) {
                   key={item.path}
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${active
-                    ? 'bg-teal-500/20 text-teal-400'
+                  className={`flex items-center gap-3 rounded-xl transition-all duration-200 ${active
+                    ? 'bg-teal-500/20 text-teal-400 shadow-lg shadow-teal-500/10'
                     : 'text-midnight-300 hover:bg-white/5 hover:text-white'
-                    }`}
+                    } ${sidebarCollapsed ? 'lg:justify-center lg:w-12 lg:h-12 lg:p-0' : 'px-4 py-3'}`}
+                  title={sidebarCollapsed ? item.label : ''}
                 >
-                  <Icon className={`w-5 h-5 ${active ? 'text-teal-400' : ''}`} />
-                  <span className="font-medium">{item.label}</span>
-                  {active && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-400" />
+                  <Icon className={`transition-all duration-200 ${active ? 'text-teal-400' : ''} ${sidebarCollapsed ? 'lg:w-6 lg:h-6' : 'w-5 h-5'}`} />
+                  <span className={`font-medium transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                    {item.label}
+                  </span>
+                  {active && !sidebarCollapsed && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-400 lg:block hidden animate-pulse" />
                   )}
                 </Link>
               );
@@ -124,25 +166,32 @@ function Layout({ children }: LayoutProps) {
           </nav>
 
           {/* User Menu / Footer */}
-          <div className="p-4 border-t border-white/10">
+          <div className={`p-4 border-t border-white/10 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-3 lg:py-4' : ''}`}>
             {isSupabaseConfigured && user ? (
               <div className="space-y-3">
                 {/* Sync Status */}
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-midnight-800/50">
+                <div className={`flex items-center gap-2 rounded-lg bg-midnight-800/50 transition-all duration-300 ${sidebarCollapsed ? 'lg:justify-center lg:w-12 lg:h-12 lg:mx-auto' : 'px-3 py-2'}
+                  }`}>
                   {syncStatus === 'synced' ? (
                     <>
-                      <CheckCircle className="w-4 h-4 text-teal-400" />
-                      <span className="text-xs text-teal-400">Synced</span>
+                      <CheckCircle className={`text-teal-400 flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
+                      <span className={`text-xs text-teal-400 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                        Synced
+                      </span>
                     </>
                   ) : syncStatus === 'syncing' ? (
                     <>
-                      <Cloud className="w-4 h-4 text-blue-400 animate-pulse" />
-                      <span className="text-xs text-blue-400">Syncing...</span>
+                      <Cloud className={`text-blue-400 animate-pulse flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
+                      <span className={`text-xs text-blue-400 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                        Syncing...
+                      </span>
                     </>
                   ) : (
                     <>
-                      <Cloud className="w-4 h-4 text-midnight-400" />
-                      <span className="text-xs text-midnight-400">Idle</span>
+                      <Cloud className={`text-midnight-400 flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
+                      <span className={`text-xs text-midnight-400 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                        Idle
+                      </span>
                     </>
                   )}
                 </div>
@@ -151,14 +200,16 @@ function Layout({ children }: LayoutProps) {
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
+                    className={`flex items-center gap-3 rounded-lg hover:bg-white/5 transition-all duration-300 ${sidebarCollapsed ? 'lg:justify-center lg:w-12 lg:h-12 lg:mx-auto' : 'w-full px-3 py-2'}
+                      }`}
+                    title={sidebarCollapsed ? user.email || 'Account' : ''}
                   >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                      <User className="w-4 h-4 text-white" />
+                    <div className={`rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-10 lg:h-10' : 'w-8 h-8'}`}>
+                      <User className={`text-white transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
                     </div>
-                    <div className="flex-1 text-left overflow-hidden">
+                    <div className={`flex-1 text-left transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
                       <p className="text-sm text-white font-medium truncate">{user.email}</p>
-                      <p className="text-xs text-midnight-400">Account</p>
+                      <p className="text-xs text-midnight-400 whitespace-nowrap">Account</p>
                     </div>
                   </button>
 
@@ -183,20 +234,36 @@ function Layout({ children }: LayoutProps) {
                 </div>
               </div>
             ) : (
-              <div className="text-center">
+              <div className={`text-center transition-all duration-300 ${sidebarCollapsed ? 'lg:px-0' : ''}`}>
                 {isSupabaseConfigured ? (
                   <div className="space-y-2">
                     <CloudOff className="w-6 h-6 text-midnight-500 mx-auto" />
-                    <p className="text-xs text-midnight-400">Not signed in</p>
+                    <p className={`text-xs text-midnight-400 transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:h-0 lg:opacity-0' : 'h-auto opacity-100'}`}>
+                      Not signed in
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-xs text-midnight-400">
+                  <p className={`text-xs text-midnight-400 transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:h-0 lg:opacity-0' : 'h-auto opacity-100'}`}>
                     Made with ❤️ for small businesses
                   </p>
                 )}
               </div>
             )}
           </div>
+
+          {/* Desktop Sidebar Toggle Button - Integrated into sidebar edge */}
+          <button
+            onClick={toggleDesktopSidebar}
+            className="hidden lg:flex absolute -right-3 top-4 items-center justify-center w-6 h-12 rounded-r-lg glass hover:bg-white/10 transition-all duration-300 shadow-lg opacity-0 group-hover:opacity-100 hover:!opacity-100 border-l-0"
+            aria-label="Toggle sidebar"
+            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {sidebarCollapsed ? (
+              <ChevronRight className="w-4 h-4 text-white" />
+            ) : (
+              <ChevronLeft className="w-4 h-4 text-white" />
+            )}
+          </button>
         </div>
       </aside>
 

@@ -2,9 +2,9 @@
 export interface InvoiceItem {
   id: string;
   name: string;
-  quantity: number;
+  quantity: number | '';
   unit?: string;
-  price: number;
+  price: number | '';
 }
 
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'overdue' | 'cancelled';

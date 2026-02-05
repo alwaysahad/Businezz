@@ -175,10 +175,9 @@ function Invoices() {
       {/* Search and Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-400 pointer-events-none" />
+          <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-midnight-400 pointer-events-none transition-opacity duration-200 ${searchQuery ? 'opacity-0' : 'opacity-100'}`} />
           <input
             type="text"
-            placeholder="Search invoices..."
             value={searchQuery}
             onChange={handleSearchChange}
             className="input-field pl-11"

@@ -16,7 +16,7 @@ export const generateId = (): string => {
 // Format currency
 export const formatCurrency = (amount: number | string, currency: string = '₹'): string => {
   const num = parseFloat(String(amount)) || 0;
-  return `${currency}${num.toLocaleString('en-IN', {
+  return `${currency}${num.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
   })}`;

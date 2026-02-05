@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   User,
   Loader2,
+  Receipt,
 } from 'lucide-react';
 import { generateId, formatCurrency, formatDate, calculateInvoiceTotals } from '../utils/helpers';
 import type { Invoice, InvoiceItem, Customer, Product, FormErrors } from '../types';
@@ -34,7 +35,7 @@ function CreateInvoice() {
     customerEmail: '',
     customerPhone: '',
     customerAddress: '',
-    items: [{ id: generateId(), name: '', quantity: 1, price: 0 }],
+    items: [{ id: generateId(), name: '', quantity: '', price: '', unit: '' }],
     taxRate: 0,
     discount: 0,
     notes: '',
@@ -126,7 +127,7 @@ function CreateInvoice() {
   const addItem = (): void => {
     setInvoice(prev => ({
       ...prev,
-      items: [...prev.items, { id: generateId(), name: '', quantity: 1, unit: 'PCS', price: 0 }],
+      items: [...prev.items, { id: generateId(), name: '', quantity: '', price: '', unit: '' }],
     }));
   };
 
@@ -172,7 +173,7 @@ function CreateInvoice() {
     if (invoice.items.some(item => !item.name.trim())) {
       newErrors.items = 'All items must have a name';
     }
-    if (invoice.items.some(item => item.quantity <= 0)) {
+    if (invoice.items.some(item => typeof item.quantity === 'string' || item.quantity <= 0)) {
       newErrors.items = 'Quantity must be greater than 0';
     }
     setErrors(newErrors);
@@ -188,6 +189,11 @@ function CreateInvoice() {
         ...invoice,
         status,
         date: new Date(invoice.date).toISOString(),
+        items: invoice.items.map(item => ({
+          ...item,
+          quantity: Number(item.quantity) || 0,
+          price: Number(item.price) || 0,
+        })),
       };
 
       await saveInvoice(invoiceToSave);
@@ -222,38 +228,18 @@ function CreateInvoice() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2.5 -ml-1 rounded-lg hover:bg-midnight-700 active:bg-midnight-600 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5 text-midnight-300" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-display font-bold text-white truncate">
-              {isEditing ? 'Edit Invoice' : 'Create Invoice'}
-            </h1>
-            <p className="text-midnight-400 text-sm">{invoice.invoiceNumber || 'Generating number...'}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={() => handleSave('draft')}
-            disabled={isSaving}
-            className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none"
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>Save Draft</span>
-          </button>
-          <button
-            onClick={() => handleSave('pending')}
-            disabled={isSaving}
-            className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none"
-          >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-            <span>Save & Preview</span>
-          </button>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2.5 -ml-1 rounded-lg hover:bg-midnight-700 active:bg-midnight-600 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-midnight-300" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-display font-bold text-white truncate">
+            {isEditing ? 'Edit Invoice' : 'Create Invoice'}
+          </h1>
+          <p className="text-midnight-400 text-sm">{invoice.invoiceNumber || 'Generating number...'}</p>
         </div>
       </div>
 
@@ -350,14 +336,19 @@ function CreateInvoice() {
             </div>
           </div>
 
-          {/* Invoice Items - Tabular Form */}
-          <div className="glass rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Items</h2>
+          {/* Invoice Items - Enhanced Visibility */}
+          <div className="glass rounded-2xl p-6 ring-2 ring-teal-500/20">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                  <Receipt className="w-4 h-4 text-teal-400" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">Items</h2>
+              </div>
               <button
                 type="button"
                 onClick={addItem}
-                className="text-teal-400 hover:text-teal-300 flex items-center gap-1 text-sm"
+                className="btn-secondary flex items-center gap-2 text-sm"
               >
                 <Plus className="w-4 h-4" />
                 Add Item
@@ -371,11 +362,11 @@ function CreateInvoice() {
             {/* Table Header */}
             <div className="hidden sm:grid sm:grid-cols-12 gap-2 pb-2 border-b border-midnight-600 mb-2">
               <div className="col-span-1 text-midnight-400 text-xs font-medium">#</div>
-              <div className="col-span-4 text-midnight-400 text-xs font-medium">Item Name</div>
+              <div className="col-span-3 text-midnight-400 text-xs font-medium">Item Name</div>
               <div className="col-span-2 text-midnight-400 text-xs font-medium text-center">Qty</div>
               <div className="col-span-1 text-midnight-400 text-xs font-medium text-center">Unit</div>
               <div className="col-span-2 text-midnight-400 text-xs font-medium text-right">Price</div>
-              <div className="col-span-2 text-midnight-400 text-xs font-medium text-right">Amount</div>
+              <div className="col-span-3 text-midnight-400 text-xs font-medium text-right">Amount</div>
             </div>
 
             {/* Table Rows */}
@@ -391,7 +382,7 @@ function CreateInvoice() {
                   </div>
 
                   {/* Item Name */}
-                  <div className="sm:col-span-4 relative">
+                  <div className="sm:col-span-3 relative">
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Item Name</label>
                     <input
                       type="text"
@@ -437,8 +428,14 @@ function CreateInvoice() {
                       type="number"
                       min="1"
                       value={item.quantity}
-                      onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                      className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-center focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all"
+                      onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || '')}
+                      onKeyDown={(e) => {
+                        // Prevent non-numeric characters (except backspace, delete, arrow keys, tab)
+                        if (!/[0-9]/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-center focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
 
@@ -447,10 +444,10 @@ function CreateInvoice() {
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Unit</label>
                     <input
                       type="text"
-                      value={item.unit || 'PCS'}
+                      value={item.unit || ''}
                       onChange={(e) => handleItemChange(item.id, 'unit', e.target.value)}
                       className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-center focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all"
-                      placeholder="PCS"
+                      placeholder=""
                     />
                   </div>
 
@@ -462,16 +459,16 @@ function CreateInvoice() {
                       min="0"
                       step="0.01"
                       value={item.price}
-                      onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || 0)}
-                      className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-right focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all font-mono"
+                      onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')}
+                      className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-right focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     />
                   </div>
 
                   {/* Amount & Delete */}
-                  <div className="sm:col-span-2 flex items-center justify-between sm:justify-end gap-2">
+                  <div className="sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
                     <div className="sm:hidden text-midnight-400 text-xs">Amount:</div>
-                    <span className="text-white font-mono text-sm font-semibold">
-                      {formatCurrency(item.quantity * item.price, business.currency)}
+                    <span className="text-white font-mono text-sm font-semibold truncate">
+                      {formatCurrency((Number(item.quantity) || 0) * (Number(item.price) || 0), business.currency)}
                     </span>
                     {invoice.items.length > 1 && (
                       <button
@@ -590,6 +587,28 @@ function CreateInvoice() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Sticky Bottom Action Bar */}
+      <div className="sticky bottom-0 z-10 mt-6 -mx-6 px-6 py-4 bg-midnight-900/95 backdrop-blur-lg border-t border-midnight-700">
+        <div className="flex items-center gap-3 max-w-7xl mx-auto">
+          <button
+            onClick={() => handleSave('draft')}
+            disabled={isSaving}
+            className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none sm:min-w-[140px]"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>Save Draft</span>
+          </button>
+          <button
+            onClick={() => handleSave('pending')}
+            disabled={isSaving}
+            className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none sm:min-w-[160px]"
+          >
+            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            <span>Save & Preview</span>
+          </button>
         </div>
       </div>
 

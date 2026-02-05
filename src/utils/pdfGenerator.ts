@@ -49,6 +49,19 @@ const formatPDFCurrency = (amount: number | string, currency: string = 'Rs.'): s
   return `${currencySymbol} ${num.toFixed(2)}`;
 };
 
+// Helper function to check if content fits on current page and add new page if needed
+const checkAndAddPage = (doc: jsPDF, currentY: number, requiredSpace: number, margin: number = 15): number => {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const bottomMargin = 20; // Reserve space at bottom of page
+
+  if (currentY + requiredSpace > pageHeight - bottomMargin) {
+    doc.addPage();
+    return margin; // Return to top margin on new page
+  }
+
+  return currentY;
+};
+
 export const generateInvoicePDF = (
   invoice: Invoice,
   business: Business,
@@ -56,7 +69,6 @@ export const generateInvoicePDF = (
 ): jsPDF => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 15;
   const contentWidth = pageWidth - 2 * margin;
   let y = 15;
@@ -176,7 +188,7 @@ export const generateInvoicePDF = (
 
   // Items table with new columns
   const tableData = invoice.items.map((item, index) => {
-    const itemTotal = item.quantity * item.price;
+    const itemTotal = Number(item.quantity) * Number(item.price);
     const itemDiscount = (itemTotal * invoice.discount) / 100;
     const itemTaxable = itemTotal - itemDiscount;
     const itemGst = (itemTaxable * invoice.taxRate) / 100;
@@ -232,48 +244,60 @@ export const generateInvoicePDF = (
 
   y = doc.lastAutoTable.finalY + 5;
 
+  // Check if we need a new page for the summary section (needs ~30 units)
+  y = checkAndAddPage(doc, y, 30, margin);
+
   // Horizontal line
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageWidth - margin, y);
   y += 8;
 
-  // Tax Summary and Amounts - Two columns
-  const taxTableY = y;
+  // Tax Summary using autoTable (left side)
+  const taxTableData = [
+    ['SGST', formatPDFCurrency(totals.taxableAmount, currency), `${(invoice.taxRate / 2).toFixed(1)}%`, formatPDFCurrency(totals.taxAmount / 2, currency)],
+    ['CGST', formatPDFCurrency(totals.taxableAmount, currency), `${(invoice.taxRate / 2).toFixed(1)}%`, formatPDFCurrency(totals.taxAmount / 2, currency)],
+  ];
 
-  // Tax breakdown table (left)
+  doc.autoTable({
+    startY: y,
+    head: [['Tax type', 'Taxable amt', 'Rate', 'Tax amount']],
+    body: taxTableData,
+    margin: { left: margin, right: pageWidth / 2 + 10 },
+    tableWidth: (pageWidth / 2) - margin - 15,
+    styles: {
+      fontSize: 6,
+      cellPadding: 1.5,
+      lineColor: [0, 0, 0],
+      lineWidth: 0.1,
+      textColor: [0, 0, 0],
+    },
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      fontStyle: 'bold',
+      lineWidth: 0.2,
+    },
+    bodyStyles: {
+      fillColor: [255, 255, 255],
+    },
+    columnStyles: {
+      0: { cellWidth: 15, halign: 'left' },
+      1: { cellWidth: 'auto', halign: 'right' },
+      2: { cellWidth: 12, halign: 'center' },
+      3: { cellWidth: 'auto', halign: 'right' },
+    },
+  });
+
+  const taxTableEndY = doc.lastAutoTable.finalY;
+
+  // Amounts (right side) - positioned at same Y as tax table
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
-  doc.text('Tax type', leftColX, taxTableY);
-  doc.text('Taxable amount', leftColX + 35, taxTableY, { align: 'right' });
-  doc.text('Rate', leftColX + 50, taxTableY, { align: 'center' });
-  doc.text('Tax amount', leftColX + 70, taxTableY, { align: 'right' });
+  doc.text('Amounts', rightColX, y);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  let taxY = taxTableY + 5;
-
-  const sgstRate = invoice.taxRate / 2;
-  const sgstAmount = totals.taxAmount / 2;
-
-  doc.text('SGST', leftColX, taxY);
-  doc.text(formatPDFCurrency(totals.taxableAmount, currency), leftColX + 35, taxY, { align: 'right' });
-  doc.text(`${sgstRate.toFixed(1)}%`, leftColX + 50, taxY, { align: 'center' });
-  doc.text(formatPDFCurrency(sgstAmount, currency), leftColX + 70, taxY, { align: 'right' });
-  taxY += 5;
-
-  doc.text('CGST', leftColX, taxY);
-  doc.text(formatPDFCurrency(totals.taxableAmount, currency), leftColX + 35, taxY, { align: 'right' });
-  doc.text(`${sgstRate.toFixed(1)}%`, leftColX + 50, taxY, { align: 'center' });
-  doc.text(formatPDFCurrency(sgstAmount, currency), leftColX + 70, taxY, { align: 'right' });
-
-  // Amounts (right)
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
-  doc.text('Amounts', rightColX, taxTableY);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  let amountY = taxTableY + 5;
+  let amountY = y + 5;
 
   doc.text('Sub Total', rightColX, amountY);
   doc.text(formatPDFCurrency(totals.taxableAmount, currency), pageWidth - margin, amountY, { align: 'right' });
@@ -289,12 +313,21 @@ export const generateInvoicePDF = (
   doc.text('Total', rightColX, amountY);
   doc.text(formatPDFCurrency(totals.total, currency), pageWidth - margin, amountY, { align: 'right' });
 
-  y = Math.max(taxY, amountY) + 8;
+  y = Math.max(taxTableEndY, amountY) + 8;
 
   // Horizontal line
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageWidth - margin, y);
   y += 8;
+
+  // Calculate space needed for footer section
+  const amountWords = `${numberToWords(Math.floor(totals.total))} Rupees only`;
+  const wordsLines = doc.splitTextToSize(amountWords, (pageWidth / 2) - margin - 10);
+  const notesLines = invoice.notes ? doc.splitTextToSize(invoice.notes, (pageWidth / 2) - margin - 10) : [];
+  const footerHeight = 15 + wordsLines.length * 4 + 10 + (notesLines.length * 4) + 35; // Space for words, terms, notes, and signature
+
+  // Check if we need a new page for the footer section
+  y = checkAndAddPage(doc, y, footerHeight, margin);
 
   // Footer section - Two columns
   const footerStartY = y;
@@ -307,8 +340,6 @@ export const generateInvoicePDF = (
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  const amountWords = `${numberToWords(Math.floor(totals.total))} Rupees only`;
-  const wordsLines = doc.splitTextToSize(amountWords, (pageWidth / 2) - margin - 10);
   doc.text(wordsLines, leftColX, y);
   y += wordsLines.length * 4 + 5;
 
@@ -320,11 +351,10 @@ export const generateInvoicePDF = (
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
 
-
   if (invoice.notes) {
     y += 2;
-    const notesLines = doc.splitTextToSize(invoice.notes, (pageWidth / 2) - margin - 10);
     doc.text(notesLines, leftColX, y);
+    y += notesLines.length * 4;
   }
 
   // Right column - Signature
@@ -332,21 +362,21 @@ export const generateInvoicePDF = (
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.text(`For: ${business.name || 'Your Business Name'}`, rightColX, sigY);
-
-  // Signature line
-  sigY = pageHeight - 40;
+  sigY += 10;
 
   // Add signature image if available
   if (business.signature) {
     try {
       console.log('Adding signature to PDF:', { hasSignature: !!business.signature });
-      doc.addImage(business.signature, 'PNG', rightColX + 15, sigY - 10, 30, 15);
-      sigY += 10;
+      doc.addImage(business.signature, 'PNG', rightColX + 15, sigY, 30, 15);
+      sigY += 20;
     } catch (error) {
       console.error('Failed to add signature to PDF:', error);
+      sigY += 15; // Add space even if signature fails
     }
   } else {
     console.log('Signature not added to PDF:', { hasSignature: !!business.signature });
+    sigY += 15; // Add space for signature line
   }
 
   doc.setLineWidth(0.3);
