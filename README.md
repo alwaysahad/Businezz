@@ -40,16 +40,26 @@ A modern, cloud-powered invoice generator application designed for small busines
 - **Quick Add**: Instantly add products to invoices from your catalog
 
 ### 📤 Export & Sharing
-- **PDF Generation**: Download professional PDF invoices with your branding
+- **Optimized PDF Generation**: Lightning-fast PDF creation using Web Workers (non-blocking UI)
+- **Background Processing**: Generate PDFs without freezing the interface
+- **Progress Tracking**: Real-time progress updates during PDF generation
+- **Professional PDFs**: Download invoices with your branding and logo
 - **Print Support**: Direct printing from the browser
 - **Native Sharing**: Share invoices via WhatsApp, Email, SMS, and more
-- **Logo Display**: Optionally show/hide your business logo on invoices
+- **Responsive Performance**: Smooth experience even with large invoices (50+ items)
 
 ### 🎨 Modern UI/UX
 - **Beautiful Design**: Premium dark theme with glassmorphism effects
 - **Responsive Layout**: Works perfectly on desktop, tablet, and mobile
 - **Smooth Animations**: Delightful micro-interactions and transitions
 - **Intuitive Navigation**: Easy-to-use interface with clear visual hierarchy
+
+### ⚡ Performance Optimizations
+- **Web Worker PDF Generation**: Non-blocking PDF creation in background threads
+- **Optimized Build**: Code splitting and lazy loading for faster initial load
+- **Efficient Rendering**: React Query caching for instant data access
+- **Responsive UI**: Interface remains smooth even during heavy operations
+- **Production Ready**: Optimized bundle size with tree-shaking
 
 ## 🚀 Technology Stack
 
@@ -63,7 +73,7 @@ A modern, cloud-powered invoice generator application designed for small busines
 | **Real-time Sync** | Supabase Realtime |
 | **State Management** | React Query (TanStack Query) |
 | **Routing** | React Router v6 |
-| **PDF Generation** | jsPDF + jsPDF-AutoTable |
+| **PDF Generation** | jsPDF + jsPDF-AutoTable + Web Workers |
 | **Icons** | Lucide React |
 | **Date Handling** | date-fns |
 
