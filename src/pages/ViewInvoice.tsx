@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { formatCurrency, formatDate, calculateInvoiceTotals, numberToWords, getStatusColor, getStatusLabel } from '../utils/helpers';
-import { downloadInvoicePDF, openInvoicePDFInNewTab, getInvoicePDFBlob } from '../utils/pdfGenerator';
+import { usePDFGenerator } from '../hooks/usePDFGenerator';
 import type { Invoice, InvoiceStatus } from '../types';
 import { useInvoice, useBusiness, useSettings } from '../hooks/useData';
 
@@ -31,6 +31,7 @@ function ViewInvoice() {
   const { invoice, loading: invoiceLoading, saveInvoice } = useInvoice(id);
   const { business, loading: businessLoading } = useBusiness();
   const { settings, loading: settingsLoading } = useSettings();
+  const { generatePDF, downloadPDF } = usePDFGenerator();
 
   const printRef = useRef<HTMLDivElement>(null);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
@@ -67,12 +68,24 @@ function ViewInvoice() {
 
   const totals = calculateInvoiceTotals(invoice.items, invoice.taxRate, invoice.discount);
 
-  const handleDownloadPDF = (): void => {
-    downloadInvoicePDF(invoice, business, settings);
+  const handleDownloadPDF = async (): Promise<void> => {
+    try {
+      await downloadPDF(invoice, business, settings, `${invoice.invoiceNumber}.pdf`);
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+    }
   };
 
-  const handlePrint = (): void => {
-    openInvoicePDFInNewTab(invoice, business, settings);
+  const handlePrint = async (): Promise<void> => {
+    try {
+      const blob = await generatePDF(invoice, business, settings);
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      // Cleanup URL after a delay
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (error) {
+      console.error('Failed to open PDF:', error);
+    }
   };
 
   const handleStatusChange = async (newStatus: InvoiceStatus): Promise<void> => {
@@ -91,7 +104,7 @@ function ViewInvoice() {
   const handleSharePDF = async (): Promise<void> => {
     setSharing(true);
     try {
-      const pdfBlob = getInvoicePDFBlob(invoice, business, settings);
+      const pdfBlob = await generatePDF(invoice, business, settings);
       const pdfFile = new File([pdfBlob], `${invoice.invoiceNumber}.pdf`, { type: 'application/pdf' });
 
       if (navigator.share && navigator.canShare({ files: [pdfFile] })) {
@@ -106,7 +119,7 @@ function ViewInvoice() {
           await saveInvoice(updatedInvoice);
         }
       } else {
-        downloadInvoicePDF(invoice, business, settings);
+        await downloadPDF(invoice, business, settings, `${invoice.invoiceNumber}.pdf`);
 
         if (invoice.status !== 'paid') {
           const updatedInvoice: Invoice = { ...invoice, status: 'paid' };
@@ -117,15 +130,15 @@ function ViewInvoice() {
       const err = error as Error;
       if (err.name !== 'AbortError') {
         console.error('Error sharing:', error);
-        downloadInvoicePDF(invoice, business, settings);
+        try {
+          await downloadPDF(invoice, business, settings, `${invoice.invoiceNumber}.pdf`);
 
-        if (invoice.status !== 'paid') {
-          try {
+          if (invoice.status !== 'paid') {
             const updatedInvoice: Invoice = { ...invoice, status: 'paid' };
             await saveInvoice(updatedInvoice);
-          } catch (saveError) {
-            console.error('Failed to update invoice status:', saveError);
           }
+        } catch (downloadError) {
+          console.error('Failed to download PDF:', downloadError);
         }
       }
     }
@@ -293,7 +306,7 @@ function ViewInvoice() {
             </thead>
             <tbody>
               {invoice.items.map((item, index) => {
-                const itemTotal = item.quantity * item.price;
+                const itemTotal = Number(item.quantity) * Number(item.price);
                 const itemDiscount = (itemTotal * invoice.discount) / 100;
                 const itemTaxable = itemTotal - itemDiscount;
                 const itemGst = (itemTaxable * invoice.taxRate) / 100;

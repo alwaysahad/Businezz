@@ -14,10 +14,10 @@ import {
   SortDesc,
   Loader2,
 } from 'lucide-react';
-import { formatCurrency, formatDate, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
-import { downloadInvoicePDF } from '../utils/pdfGenerator';
-import type { Invoice, InvoiceStats } from '../types';
 import { useInvoices, useBusiness, useSettings } from '../hooks/useData';
+import { usePDFGenerator } from '../hooks/usePDFGenerator';
+import { formatDate, formatCurrency, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
+import type { Invoice, InvoiceStats } from '../types';
 
 type SortField = 'date' | 'amount' | 'customer' | 'number';
 type SortOrder = 'asc' | 'desc';
@@ -27,6 +27,7 @@ function Invoices() {
   const { invoices, loading: invoicesLoading, deleteInvoice } = useInvoices();
   const { business, loading: businessLoading } = useBusiness();
   const { settings, loading: settingsLoading } = useSettings();
+  const { downloadPDF } = usePDFGenerator();
 
   const loading = invoicesLoading || businessLoading || settingsLoading;
 
@@ -47,8 +48,7 @@ function Invoices() {
         (inv) =>
           inv.customerName?.toLowerCase().includes(query) ||
           inv.invoiceNumber?.toLowerCase().includes(query) ||
-          inv.customerEmail?.toLowerCase().includes(query) ||
-          inv.customerPhone?.includes(query)
+          inv.customerEmail?.toLowerCase().includes(query)
       );
     }
 
@@ -57,43 +57,43 @@ function Invoices() {
     }
 
     result.sort((a, b) => {
-      let compareA: number | string;
-      let compareB: number | string;
+      let comparison = 0;
 
-      if (sortBy === 'date') {
-        compareA = new Date(a.createdAt || a.date).getTime();
-        compareB = new Date(b.createdAt || b.date).getTime();
-      } else if (sortBy === 'amount') {
-        const totalsA = calculateInvoiceTotals(a.items, a.taxRate, a.discount);
-        const totalsB = calculateInvoiceTotals(b.items, b.taxRate, b.discount);
-        compareA = totalsA.total;
-        compareB = totalsB.total;
-      } else if (sortBy === 'customer') {
-        compareA = a.customerName?.toLowerCase() || '';
-        compareB = b.customerName?.toLowerCase() || '';
-      } else {
-        compareA = a.invoiceNumber;
-        compareB = b.invoiceNumber;
+      switch (sortBy) {
+        case 'date':
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
+          break;
+        case 'amount': {
+          const aTotal = calculateInvoiceTotals(a.items, a.taxRate, a.discount).total;
+          const bTotal = calculateInvoiceTotals(b.items, b.taxRate, b.discount).total;
+          comparison = aTotal - bTotal;
+          break;
+        }
+        case 'customer':
+          comparison = (a.customerName || '').localeCompare(b.customerName || '');
+          break;
+        case 'number':
+          comparison = (a.invoiceNumber || '').localeCompare(b.invoiceNumber || '');
+          break;
       }
 
-      if (sortOrder === 'asc') {
-        return compareA > compareB ? 1 : -1;
-      }
-      return compareA < compareB ? 1 : -1;
+      return sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return result;
   }, [invoices, searchQuery, statusFilter, sortBy, sortOrder]);
 
-  const stats = useMemo((): InvoiceStats => ({
-    total: invoices.length,
-    draft: invoices.filter((i) => i.status === 'draft').length,
-    pending: invoices.filter((i) => i.status === 'pending').length,
-    paid: invoices.filter((i) => i.status === 'paid').length,
-    overdue: invoices.filter((i) => i.status === 'overdue').length,
-  }), [invoices]);
+  const stats = useMemo((): InvoiceStats => {
+    return {
+      total: invoices.reduce((sum, i) => sum + calculateInvoiceTotals(i.items, i.taxRate, i.discount).total, 0),
+      draft: invoices.filter((i) => i.status === 'draft').length,
+      pending: invoices.reduce((sum, i) => i.status === 'pending' ? sum + calculateInvoiceTotals(i.items, i.taxRate, i.discount).total : sum, 0),
+      paid: invoices.filter((i) => i.status === 'paid').length,
+      overdue: invoices.filter((i) => i.status === 'overdue').length,
+    };
+  }, [invoices]);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string): Promise<void> => {
     setDeletingId(id);
     try {
       await deleteInvoice(id);
@@ -106,9 +106,13 @@ function Invoices() {
     }
   };
 
-  const handleDownloadPDF = (invoice: Invoice): void => {
-    downloadInvoicePDF(invoice, business, settings);
-    setActiveMenu(null);
+  const handleDownloadPDF = async (invoice: Invoice): Promise<void> => {
+    try {
+      await downloadPDF(invoice, business, settings, `${invoice.invoiceNumber}.pdf`);
+      setActiveMenu(null);
+    } catch (error) {
+      console.error('Failed to download PDF:', error);
+    }
   };
 
   const toggleSort = (field: SortField): void => {
