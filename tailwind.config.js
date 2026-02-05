@@ -66,6 +66,7 @@ export default {
         }
       },
       fontFamily: {
+        'brand': ['Space Grotesk', 'system-ui', 'sans-serif'],
         'display': ['Playfair Display', 'Georgia', 'serif'],
         'body': ['DM Sans', 'system-ui', 'sans-serif'],
         'mono': ['JetBrains Mono', 'Consolas', 'monospace'],

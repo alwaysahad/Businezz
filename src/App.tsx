@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import { Loader2 } from 'lucide-react';
 
 // Lazy load all page components for code splitting
+const Landing = lazy(() => import('./pages/Landing'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Invoices = lazy(() => import('./pages/Invoices'));
 const CreateInvoice = lazy(() => import('./pages/CreateInvoice'));
@@ -40,27 +41,72 @@ function App() {
           <Suspense fallback={<PageLoader />}>
             <Routes>
               {/* Public Routes */}
+              <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
 
               {/* Protected Routes */}
               <Route
-                path="/*"
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Suspense fallback={<PageLoader />}>
+                        <Dashboard />
+                      </Suspense>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/invoices/*"
                 element={
                   <ProtectedRoute>
                     <Layout>
                       <Suspense fallback={<PageLoader />}>
                         <Routes>
-                          <Route path="/" element={<Dashboard />} />
-                          <Route path="/invoices" element={<Invoices />} />
-                          <Route path="/invoices/new" element={<CreateInvoice />} />
-                          <Route path="/invoices/edit/:id" element={<CreateInvoice />} />
-                          <Route path="/invoices/view/:id" element={<ViewInvoice />} />
-                          <Route path="/products" element={<Products />} />
-                          <Route path="/customers" element={<Customers />} />
-                          <Route path="/settings" element={<Settings />} />
+                          <Route path="/" element={<Invoices />} />
+                          <Route path="/new" element={<CreateInvoice />} />
+                          <Route path="/edit/:id" element={<CreateInvoice />} />
+                          <Route path="/view/:id" element={<ViewInvoice />} />
                         </Routes>
+                      </Suspense>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/products"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Suspense fallback={<PageLoader />}>
+                        <Products />
+                      </Suspense>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/customers"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Suspense fallback={<PageLoader />}>
+                        <Customers />
+                      </Suspense>
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <Suspense fallback={<PageLoader />}>
+                        <Settings />
                       </Suspense>
                     </Layout>
                   </ProtectedRoute>

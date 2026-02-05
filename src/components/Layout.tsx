@@ -87,7 +87,7 @@ function Layout({ children }: LayoutProps) {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/login');
+    navigate('/');
   };
 
   const toggleDesktopSidebar = () => {
@@ -112,12 +112,12 @@ function Layout({ children }: LayoutProps) {
         <div className="h-full flex flex-col glass rounded-r-2xl lg:rounded-2xl m-0 lg:m-4 relative">
           {/* Logo */}
           <div className={`p-6 border-b border-white/10 transition-all duration-300 ${sidebarCollapsed ? 'lg:p-4 lg:pb-4' : ''}`}>
-            <Link to="/" className={`flex items-center ${sidebarCollapsed ? 'lg:justify-center' : 'gap-3'}`}>
+            <Link to="/dashboard" className={`flex items-center ${sidebarCollapsed ? 'lg:justify-center' : 'gap-3'}`}>
               <div className={`rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-glow transition-all duration-300 ${sidebarCollapsed ? 'lg:w-12 lg:h-12' : 'w-10 h-10'}`}>
                 <Receipt className={`text-white transition-all duration-300 ${sidebarCollapsed ? 'lg:w-6 lg:h-6' : 'w-5 h-5'}`} />
               </div>
               <div className={`transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
-                <h1 className="text-xl font-display font-bold text-white whitespace-nowrap">Businezz</h1>
+                <h1 className="text-xl font-brand font-bold text-white whitespace-nowrap tracking-tight">Businezz</h1>
                 <p className="text-xs text-midnight-400 whitespace-nowrap">Smart Billing</p>
               </div>
             </Link>
@@ -220,13 +220,17 @@ function Layout({ children }: LayoutProps) {
                         className="fixed inset-0 z-40"
                         onClick={() => setUserMenuOpen(false)}
                       />
-                      <div className="absolute bottom-full left-0 right-0 mb-2 glass rounded-lg p-2 z-50 animate-fade-in">
+                      <div className={`absolute z-50 animate-fade-in glass rounded-lg shadow-lg ${sidebarCollapsed
+                        ? 'lg:bottom-0 lg:left-[calc(100%+8px)] bottom-full left-0 right-0 mb-2'
+                        : 'bottom-full left-0 right-0 mb-2'
+                        }`}>
                         <button
                           onClick={handleSignOut}
-                          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-coral-400 hover:bg-coral-500/10 transition-colors"
+                          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-coral-400 hover:bg-coral-500/10 transition-colors ${sidebarCollapsed ? 'lg:w-auto' : 'w-full'
+                            }`}
                         >
-                          <LogOut className="w-4 h-4" />
-                          <span className="text-sm font-medium">Sign Out</span>
+                          <LogOut className="w-4 h-4 flex-shrink-0" />
+                          <span className="text-sm font-medium whitespace-nowrap">Sign Out</span>
                         </button>
                       </div>
                     </>
@@ -271,11 +275,11 @@ function Layout({ children }: LayoutProps) {
       <main className="flex-1 flex flex-col min-h-screen lg:p-4">
         {/* Mobile header */}
         <header className="lg:hidden flex items-center justify-between p-4 glass safe-area-top sticky top-0 z-30">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/dashboard" className="flex items-center gap-2">
             <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
               <Receipt className="w-5 h-5 text-white" />
             </div>
-            <span className="font-display font-bold text-white text-lg">Businezz</span>
+            <span className="font-brand font-bold text-white text-lg tracking-tight">Businezz</span>
           </Link>
           <div className="flex items-center gap-2">
             {isSupabaseConfigured && user && (

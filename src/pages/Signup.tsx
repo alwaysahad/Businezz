@@ -45,7 +45,7 @@ function Signup() {
                 }
 
                 // Navigate to dashboard
-                navigate('/');
+                navigate('/dashboard');
             }
         } catch (err) {
             setError('An unexpected error occurred');
