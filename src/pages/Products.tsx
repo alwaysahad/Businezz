@@ -32,6 +32,7 @@ function Products() {
     description: '',
     price: '',
     unit: 'piece',
+    taxRate: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -49,10 +50,11 @@ function Products() {
         description: product.description || '',
         price: product.price.toString(),
         unit: product.unit || 'piece',
+        taxRate: product.taxRate?.toString() || '',
       });
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', description: '', price: '', unit: 'piece' });
+      setFormData({ name: '', description: '', price: '', unit: 'piece', taxRate: '' });
     }
     setErrors({});
     setShowModal(true);
@@ -61,7 +63,7 @@ function Products() {
   const closeModal = (): void => {
     setShowModal(false);
     setEditingProduct(null);
-    setFormData({ name: '', description: '', price: '', unit: 'piece' });
+    setFormData({ name: '', description: '', price: '', unit: 'piece', taxRate: '' });
     setErrors({});
   };
 
@@ -96,6 +98,7 @@ function Products() {
         description: formData.description.trim(),
         price: parseFloat(formData.price),
         unit: formData.unit,
+        taxRate: formData.taxRate ? parseFloat(formData.taxRate) : undefined,
       };
 
       await saveProduct(productData);
@@ -191,6 +194,13 @@ function Products() {
                       <span className="text-midnight-400 text-sm">/ {product.unit}</span>
                     )}
                   </div>
+                  {product.taxRate !== undefined && product.taxRate > 0 && (
+                    <div className="mt-2">
+                      <span className="text-xs px-2 py-1 rounded-full bg-teal-500/20 text-teal-400">
+                        GST: {product.taxRate}%
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-1 ml-2">
                   <button
@@ -279,6 +289,21 @@ function Products() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="input-label">GST/Tax Rate (%)</label>
+                <input
+                  type="number"
+                  name="taxRate"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={formData.taxRate}
+                  onChange={handleInputChange}
+                  className="input-field"
+                  placeholder="e.g., 18"
+                />
               </div>
             </div>
 

@@ -35,7 +35,7 @@ function CreateInvoice() {
     customerEmail: '',
     customerPhone: '',
     customerAddress: '',
-    items: [{ id: generateId(), name: '', quantity: '', price: '', unit: '' }],
+    items: [{ id: generateId(), name: '', quantity: '', price: '', unit: '', discount: '', taxRate: '' }],
     taxRate: 0,
     discount: 0,
     notes: '',
@@ -127,7 +127,7 @@ function CreateInvoice() {
   const addItem = (): void => {
     setInvoice(prev => ({
       ...prev,
-      items: [...prev.items, { id: generateId(), name: '', quantity: '', price: '', unit: '' }],
+      items: [...prev.items, { id: generateId(), name: '', quantity: '', price: '', unit: '', discount: '', taxRate: '' }],
     }));
   };
 
@@ -157,7 +157,7 @@ function CreateInvoice() {
       ...prev,
       items: prev.items.map(item =>
         item.id === itemId
-          ? { ...item, name: product.name, price: product.price, unit: product.unit || 'PCS' }
+          ? { ...item, name: product.name, price: product.price, unit: product.unit || 'PCS', taxRate: product.taxRate || '' }
           : item
       ),
     }));
@@ -360,13 +360,16 @@ function CreateInvoice() {
             )}
 
             {/* Table Header */}
-            <div className="hidden sm:grid sm:grid-cols-12 gap-2 pb-2 border-b border-midnight-600 mb-2">
-              <div className="col-span-1 text-midnight-400 text-xs font-medium">#</div>
-              <div className="col-span-3 text-midnight-400 text-xs font-medium">Item Name</div>
-              <div className="col-span-2 text-midnight-400 text-xs font-medium text-center">Qty</div>
-              <div className="col-span-1 text-midnight-400 text-xs font-medium text-center">Unit</div>
-              <div className="col-span-2 text-midnight-400 text-xs font-medium text-right">Price</div>
-              <div className="col-span-3 text-midnight-400 text-xs font-medium text-right">Amount</div>
+            <div className="hidden sm:grid sm:grid-cols-[auto_1fr_80px_60px_100px_80px_80px_100px_auto] gap-2 pb-2 border-b border-midnight-600 mb-2">
+              <div className="text-midnight-400 text-xs font-medium">#</div>
+              <div className="text-midnight-400 text-xs font-medium">Item Name</div>
+              <div className="text-midnight-400 text-xs font-medium text-center">Qty</div>
+              <div className="text-midnight-400 text-xs font-medium text-center">Unit</div>
+              <div className="text-midnight-400 text-xs font-medium text-right">Price</div>
+              <div className="text-midnight-400 text-xs font-medium text-center">Disc %</div>
+              <div className="text-midnight-400 text-xs font-medium text-center">Tax %</div>
+              <div className="text-midnight-400 text-xs font-medium text-right">Amount</div>
+              <div className="text-midnight-400 text-xs font-medium"></div>
             </div>
 
             {/* Table Rows */}
@@ -374,15 +377,15 @@ function CreateInvoice() {
               {invoice.items.map((item, index) => (
                 <div
                   key={item.id}
-                  className="grid grid-cols-1 sm:grid-cols-12 gap-2 py-2 border-b border-midnight-700/50 items-center"
+                  className="grid grid-cols-1 sm:grid-cols-[auto_1fr_80px_60px_100px_80px_80px_100px_auto] gap-2 py-2 border-b border-midnight-700/50 items-center"
                 >
                   {/* Row Number */}
-                  <div className="hidden sm:flex col-span-1 text-midnight-400 text-sm items-center">
+                  <div className="hidden sm:flex text-midnight-400 text-sm items-center">
                     {index + 1}
                   </div>
 
                   {/* Item Name */}
-                  <div className="sm:col-span-3 relative">
+                  <div className="relative">
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Item Name</label>
                     <input
                       type="text"
@@ -422,7 +425,7 @@ function CreateInvoice() {
                   </div>
 
                   {/* Quantity */}
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Qty</label>
                     <input
                       type="number"
@@ -440,7 +443,7 @@ function CreateInvoice() {
                   </div>
 
                   {/* Unit */}
-                  <div className="sm:col-span-1">
+                  <div>
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Unit</label>
                     <input
                       type="text"
@@ -452,7 +455,7 @@ function CreateInvoice() {
                   </div>
 
                   {/* Price */}
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Price</label>
                     <input
                       type="number"
@@ -461,14 +464,55 @@ function CreateInvoice() {
                       value={item.price}
                       onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')}
                       className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-right focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all font-mono [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  {/* Discount */}
+                  <div>
+                    <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Disc %</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={item.discount || ''}
+                      onChange={(e) => handleItemChange(item.id, 'discount', parseFloat(e.target.value) || '')}
+                      className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-center focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  {/* Tax Rate */}
+                  <div>
+                    <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Tax %</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={item.taxRate || ''}
+                      onChange={(e) => handleItemChange(item.id, 'taxRate', parseFloat(e.target.value) || '')}
+                      className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm text-center focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                      placeholder="0"
                     />
                   </div>
 
                   {/* Amount & Delete */}
-                  <div className="sm:col-span-3 flex items-center justify-between sm:justify-end gap-2">
+                  <div className="flex items-center justify-between sm:justify-end gap-2">
                     <div className="sm:hidden text-midnight-400 text-xs">Amount:</div>
                     <span className="text-white font-mono text-sm font-semibold truncate">
-                      {formatCurrency((Number(item.quantity) || 0) * (Number(item.price) || 0), business.currency)}
+                      {(() => {
+                        const qty = Number(item.quantity) || 0;
+                        const price = Number(item.price) || 0;
+                        const discount = Number(item.discount) || 0;
+                        const taxRate = Number(item.taxRate) || 0;
+                        const subtotal = qty * price;
+                        const discountAmt = (subtotal * discount) / 100;
+                        const taxable = subtotal - discountAmt;
+                        const taxAmt = (taxable * taxRate) / 100;
+                        return formatCurrency(taxable + taxAmt, business.currency);
+                      })()}
                     </span>
                     {invoice.items.length > 1 && (
                       <button
@@ -531,19 +575,6 @@ function CreateInvoice() {
                   type="date"
                   name="date"
                   value={invoice.date}
-                  onChange={handleInputChange}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="input-label">{settings.taxLabel || 'Tax'} Rate (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  name="taxRate"
-                  value={invoice.taxRate}
                   onChange={handleInputChange}
                   className="input-field"
                 />

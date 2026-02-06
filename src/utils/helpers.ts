@@ -51,16 +51,32 @@ export const formatDate = (date: string | Date | null | undefined, format: DateF
   return d.toLocaleDateString();
 };
 
-// Calculate invoice totals
+// Calculate invoice totals with per-item discount and tax support
 export const calculateInvoiceTotals = (
   items: InvoiceItem[],
   taxRate: number = 0,
   discount: number = 0
 ): InvoiceTotals => {
-  const subtotal = items.reduce((sum, item) => {
-    return sum + (parseFloat(String(item.quantity)) || 0) * (parseFloat(String(item.price)) || 0);
-  }, 0);
+  // Calculate per-item totals first
+  const itemTotals = items.map(item => {
+    const qty = parseFloat(String(item.quantity)) || 0;
+    const price = parseFloat(String(item.price)) || 0;
+    const itemDiscount = parseFloat(String(item.discount)) || 0;
+    const itemTaxRate = parseFloat(String(item.taxRate)) || 0;
 
+    const itemSubtotal = qty * price;
+    const itemDiscountAmount = (itemSubtotal * itemDiscount) / 100;
+    const itemTaxable = itemSubtotal - itemDiscountAmount;
+    const itemTaxAmount = (itemTaxable * itemTaxRate) / 100;
+    const itemTotal = itemTaxable + itemTaxAmount;
+
+    return itemTotal;
+  });
+
+  // Sum all item totals to get invoice subtotal
+  const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
+
+  // Apply invoice-level discount and tax
   const discountAmount = (subtotal * (parseFloat(String(discount)) || 0)) / 100;
   const taxableAmount = subtotal - discountAmount;
   const taxAmount = (taxableAmount * (parseFloat(String(taxRate)) || 0)) / 100;

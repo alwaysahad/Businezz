@@ -5,6 +5,8 @@ export interface InvoiceItem {
   quantity: number | '';
   unit?: string;
   price: number | '';
+  discount?: number | ''; // Percentage (0-100)
+  taxRate?: number | ''; // Percentage (0-100)
 }
 
 export type InvoiceStatus = 'draft' | 'pending' | 'paid' | 'overdue' | 'cancelled';
@@ -43,6 +45,7 @@ export interface Product {
   description?: string;
   price: number;
   unit?: string;
+  taxRate?: number; // GST/Tax percentage (0-100)
 }
 
 // Business Profile Types
@@ -144,6 +147,7 @@ export interface ProductFormData {
   description: string;
   price: string;
   unit: string;
+  taxRate: string;
 }
 
 // Customer Form Data

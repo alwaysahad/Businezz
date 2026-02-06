@@ -295,22 +295,27 @@ function ViewInvoice() {
               <tr className="border-b-2 border-gray-900">
                 <th className="text-center py-3 px-2 text-gray-900 font-bold border-r border-gray-300 w-12">#</th>
                 <th className="text-left py-3 px-3 text-gray-900 font-bold border-r border-gray-300">Item name</th>
-                <th className="text-center py-3 px-2 text-gray-900 font-bold border-r border-gray-300 w-20">Quantity</th>
+                <th className="text-center py-3 px-2 text-gray-900 font-bold border-r border-gray-300 w-20">Qty</th>
                 <th className="text-center py-3 px-2 text-gray-900 font-bold border-r border-gray-300 w-16">Unit</th>
                 <th className="text-right py-3 px-3 text-gray-900 font-bold border-r border-gray-300 w-24">Price/Unit</th>
-                <th className="text-right py-3 px-3 text-gray-900 font-bold border-r border-gray-300 w-24">Discount</th>
-                <th className="text-right py-3 px-3 text-gray-900 font-bold border-r border-gray-300 w-28">Taxable<br />amount</th>
-                <th className="text-right py-3 px-3 text-gray-900 font-bold border-r border-gray-300 w-24">GST</th>
+                <th className="text-center py-3 px-2 text-gray-900 font-bold border-r border-gray-300 w-20">Disc %</th>
+                <th className="text-center py-3 px-2 text-gray-900 font-bold border-r border-gray-300 w-20">Tax %</th>
                 <th className="text-right py-3 px-3 text-gray-900 font-bold w-28">Amount</th>
               </tr>
             </thead>
             <tbody>
               {invoice.items.map((item, index) => {
-                const itemTotal = Number(item.quantity) * Number(item.price);
-                const itemDiscount = (itemTotal * invoice.discount) / 100;
-                const itemTaxable = itemTotal - itemDiscount;
-                const itemGst = (itemTaxable * invoice.taxRate) / 100;
-                const itemAmount = itemTaxable + itemGst;
+
+                const qty = Number(item.quantity);
+                const price = Number(item.price);
+                const itemDiscount = Number(item.discount) || 0;
+                const itemTaxRate = Number(item.taxRate) || 0;
+
+                const itemSubtotal = qty * price;
+                const itemDiscountAmount = (itemSubtotal * itemDiscount) / 100;
+                const itemTaxable = itemSubtotal - itemDiscountAmount;
+                const itemTaxAmount = (itemTaxable * itemTaxRate) / 100;
+                const itemTotal = itemTaxable + itemTaxAmount;
 
                 return (
                   <tr key={item.id} className="border-b border-gray-300">
@@ -318,17 +323,14 @@ function ViewInvoice() {
                     <td className="py-3 px-3 text-gray-900 font-medium border-r border-gray-300">{item.name}</td>
                     <td className="py-3 px-2 text-gray-900 text-center border-r border-gray-300">{item.quantity}</td>
                     <td className="py-3 px-2 text-gray-900 text-center border-r border-gray-300">{item.unit || 'PCS'}</td>
-                    <td className="py-3 px-3 text-gray-900 text-right border-r border-gray-300">{formatCurrency(item.price, business.currency)}</td>
-                    <td className="py-3 px-3 text-gray-900 text-right border-r border-gray-300">
-                      {formatCurrency(itemDiscount, business.currency)}<br />
-                      <span className="text-xs text-gray-600">({invoice.discount}%)</span>
+                    <td className="py-3 px-3 text-gray-900 text-right border-r border-gray-300">{formatCurrency(price, business.currency)}</td>
+                    <td className="py-3 px-2 text-gray-900 text-center border-r border-gray-300">
+                      {itemDiscount > 0 ? `${itemDiscount.toFixed(1)}%` : '-'}
                     </td>
-                    <td className="py-3 px-3 text-gray-900 text-right border-r border-gray-300">{formatCurrency(itemTaxable, business.currency)}</td>
-                    <td className="py-3 px-3 text-gray-900 text-right border-r border-gray-300">
-                      {formatCurrency(itemGst, business.currency)}<br />
-                      <span className="text-xs text-gray-600">({invoice.taxRate.toFixed(1)}%)</span>
+                    <td className="py-3 px-2 text-gray-900 text-center border-r border-gray-300">
+                      {itemTaxRate > 0 ? `${itemTaxRate.toFixed(1)}%` : '-'}
                     </td>
-                    <td className="py-3 px-3 text-gray-900 text-right font-medium">{formatCurrency(itemAmount, business.currency)}</td>
+                    <td className="py-3 px-3 text-gray-900 text-right font-medium">{formatCurrency(itemTotal, business.currency)}</td>
                   </tr>
                 );
               })}

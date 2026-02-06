@@ -186,30 +186,34 @@ export const generateInvoicePDF = (
   doc.line(margin, y, pageWidth - margin, y);
   y += 5;
 
-  // Items table with new columns
+  // Items table with per-item discount and tax
   const tableData = invoice.items.map((item, index) => {
-    const itemTotal = Number(item.quantity) * Number(item.price);
-    const itemDiscount = (itemTotal * invoice.discount) / 100;
-    const itemTaxable = itemTotal - itemDiscount;
-    const itemGst = (itemTaxable * invoice.taxRate) / 100;
-    const itemAmount = itemTaxable + itemGst;
+    const qty = Number(item.quantity);
+    const price = Number(item.price);
+    const itemDiscount = Number(item.discount) || 0;
+    const itemTaxRate = Number(item.taxRate) || 0;
+
+    const itemSubtotal = qty * price;
+    const itemDiscountAmount = (itemSubtotal * itemDiscount) / 100;
+    const itemTaxable = itemSubtotal - itemDiscountAmount;
+    const itemTaxAmount = (itemTaxable * itemTaxRate) / 100;
+    const itemTotal = itemTaxable + itemTaxAmount;
 
     return [
       (index + 1).toString(),
       item.name,
       item.quantity.toString(),
       item.unit || 'PCS',
-      formatPDFCurrency(item.price, currency),
-      `${formatPDFCurrency(itemDiscount, currency)}\n(${invoice.discount}%)`,
-      formatPDFCurrency(itemTaxable, currency),
-      `${formatPDFCurrency(itemGst, currency)}\n(${invoice.taxRate.toFixed(1)}%)`,
-      formatPDFCurrency(itemAmount, currency),
+      formatPDFCurrency(price, currency),
+      itemDiscount > 0 ? `${itemDiscount.toFixed(1)}%` : '-',
+      itemTaxRate > 0 ? `${itemTaxRate.toFixed(1)}%` : '-',
+      formatPDFCurrency(itemTotal, currency),
     ];
   });
 
   doc.autoTable({
     startY: y,
-    head: [['#', 'Item name', 'Quantity', 'Unit', 'Price/Unit', 'Discount', 'Taxable amount', 'GST', 'Amount']],
+    head: [['#', 'Item name', 'Qty', 'Unit', 'Price/Unit', 'Disc %', 'Tax %', 'Amount']],
     body: tableData,
     margin: { left: margin, right: margin },
     tableWidth: contentWidth,
@@ -234,11 +238,10 @@ export const generateInvoicePDF = (
       1: { cellWidth: 'auto' },
       2: { cellWidth: 15, halign: 'center' },
       3: { cellWidth: 12, halign: 'center' },
-      4: { cellWidth: 20, halign: 'right' },
-      5: { cellWidth: 20, halign: 'right' },
-      6: { cellWidth: 22, halign: 'right' },
-      7: { cellWidth: 20, halign: 'right' },
-      8: { cellWidth: 22, halign: 'right' },
+      4: { cellWidth: 22, halign: 'right' },
+      5: { cellWidth: 18, halign: 'center' },
+      6: { cellWidth: 18, halign: 'center' },
+      7: { cellWidth: 25, halign: 'right' },
     },
   });
 
