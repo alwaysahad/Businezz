@@ -267,7 +267,6 @@ function Products() {
                     type="number"
                     name="price"
                     min="0"
-                    step="0.01"
                     value={formData.price}
                     onChange={handleInputChange}
                     className={`input-field ${errors.price ? 'border-coral-500' : ''}`}

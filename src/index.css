@@ -60,13 +60,29 @@ body {
 }
 
 /* Input styling */
-input, select, textarea {
+input,
+select,
+textarea {
   font-family: inherit;
-  font-size: 16px; /* Prevents zoom on iOS */
+  font-size: 16px;
+  /* Prevents zoom on iOS */
 }
 
-input:focus, select:focus, textarea:focus {
+input:focus,
+select:focus,
+textarea:focus {
   outline: none;
+}
+
+/* Remove spinner arrows from number inputs */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 
 /* Print styles */
@@ -75,11 +91,11 @@ input:focus, select:focus, textarea:focus {
     background: white;
     color: black;
   }
-  
+
   .no-print {
     display: none !important;
   }
-  
+
   .print-only {
     display: block !important;
   }
@@ -90,18 +106,17 @@ input:focus, select:focus, textarea:focus {
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
 }
 
 .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.1) 50%,
-    rgba(255, 255, 255, 0) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
@@ -165,12 +180,13 @@ input:focus, select:focus, textarea:focus {
 
 /* Mobile-specific adjustments */
 @media (max-width: 640px) {
+
   .btn-primary,
   .btn-secondary,
   .btn-danger {
     @apply py-3.5 px-4;
   }
-  
+
   .input-field {
     @apply py-3.5;
   }
@@ -181,7 +197,7 @@ input:focus, select:focus, textarea:focus {
   .safe-area-bottom {
     padding-bottom: max(1rem, env(safe-area-inset-bottom));
   }
-  
+
   .safe-area-top {
     padding-top: max(0px, env(safe-area-inset-top));
   }
