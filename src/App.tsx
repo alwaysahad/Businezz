@@ -4,6 +4,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { SyncProvider } from './contexts/SyncProvider';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import OfflineIndicator from './components/OfflineIndicator';
 import { Loader2 } from 'lucide-react';
 
 // Lazy load all page components for code splitting
@@ -114,6 +115,9 @@ function App() {
               />
             </Routes>
           </Suspense>
+
+          {/* Offline Indicator - Shows on all pages */}
+          <OfflineIndicator />
         </SyncProvider>
       </AuthProvider>
     </Router>

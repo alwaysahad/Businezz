@@ -69,6 +69,9 @@ export interface Business {
   branchName?: string;
 }
 
+// Alias for compatibility
+export type BusinessProfile = Business;
+
 // Settings Types
 export interface Settings {
   id?: string;

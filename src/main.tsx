@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { registerSW } from 'virtual:pwa-register';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
@@ -20,6 +21,24 @@ const queryClient = new QueryClient({
     mutations: {
       retry: 1,
     },
+  },
+});
+
+// Register service worker for PWA functionality
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('New version available! Reload to update?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('App ready to work offline');
+  },
+  onRegistered(registration: ServiceWorkerRegistration | undefined) {
+    console.log('Service Worker registered:', registration);
+  },
+  onRegisterError(error: Error) {
+    console.error('Service Worker registration error:', error);
   },
 });
 
