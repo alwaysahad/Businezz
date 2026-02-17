@@ -54,8 +54,7 @@ export const formatDate = (date: string | Date | null | undefined, format: DateF
 // Calculate invoice totals with per-item discount and tax support
 export const calculateInvoiceTotals = (
   items: InvoiceItem[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  taxRate: number = 0, // Kept for backward compatibility but not used
+  _taxRate: number = 0, // Kept for backward compatibility but not used (prefixed with _ to indicate intentionally unused)
   discount: number = 0
 ): InvoiceTotals => {
   // Calculate subtotal (sum of item prices before any discounts/taxes)
