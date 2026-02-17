@@ -257,13 +257,13 @@ export const generateInvoicePDF = (
 
   // Tax Summary using autoTable (left side)
   const taxTableData = [
-    ['SGST', formatPDFCurrency(totals.taxableAmount, currency), `${(invoice.taxRate / 2).toFixed(1)}%`, formatPDFCurrency(totals.taxAmount / 2, currency)],
-    ['CGST', formatPDFCurrency(totals.taxableAmount, currency), `${(invoice.taxRate / 2).toFixed(1)}%`, formatPDFCurrency(totals.taxAmount / 2, currency)],
+    ['SGST', formatPDFCurrency(totals.taxAmount / 2, currency)],
+    ['CGST', formatPDFCurrency(totals.taxAmount / 2, currency)],
   ];
 
   doc.autoTable({
     startY: y,
-    head: [['Tax type', 'Taxable amt', 'Rate', 'Tax amount']],
+    head: [['Tax type', 'Tax amount']],
     body: taxTableData,
     margin: { left: margin, right: pageWidth / 2 + 10 },
     tableWidth: (pageWidth / 2) - margin - 15,
@@ -284,10 +284,8 @@ export const generateInvoicePDF = (
       fillColor: [255, 255, 255],
     },
     columnStyles: {
-      0: { cellWidth: 15, halign: 'left' },
+      0: { cellWidth: 'auto', halign: 'left' },
       1: { cellWidth: 'auto', halign: 'right' },
-      2: { cellWidth: 12, halign: 'center' },
-      3: { cellWidth: 'auto', halign: 'right' },
     },
   });
 

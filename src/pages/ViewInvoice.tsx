@@ -152,9 +152,8 @@ function ViewInvoice() {
     { value: 'overdue', label: 'Overdue', icon: AlertCircle, color: 'text-coral-400' },
   ];
 
-  // Calculate SGST and CGST (split tax equally)
-  const sgstRate = invoice.taxRate / 2;
-  const cgstRate = invoice.taxRate / 2;
+  // Calculate SGST and CGST (split total tax amount equally)
+  // totals.taxAmount now contains the sum of all item-level taxes
   const sgstAmount = totals.taxAmount / 2;
   const cgstAmount = totals.taxAmount / 2;
 
@@ -342,27 +341,21 @@ function ViewInvoice() {
         <div className="grid grid-cols-2 border-t-2 border-gray-900">
           <div className="px-6 py-4 border-r-2 border-gray-900">
             {/* Header Row */}
-            <div className="grid grid-cols-12 gap-3 border-b border-gray-300 pb-2 mb-2 text-xs font-bold text-gray-900">
-              <div className="col-span-2 text-left">Tax type</div>
-              <div className="col-span-4 text-right">Taxable amount</div>
-              <div className="col-span-2 text-center">Rate</div>
-              <div className="col-span-4 text-right">Tax amount</div>
+            <div className="grid grid-cols-2 gap-3 border-b border-gray-300 pb-2 mb-2 text-xs font-bold text-gray-900">
+              <div className="text-left">Tax type</div>
+              <div className="text-right">Tax amount</div>
             </div>
 
             {/* SGST Row */}
-            <div className="grid grid-cols-12 gap-3 border-b border-gray-300 py-2 text-xs text-gray-900">
-              <div className="col-span-2 text-left">SGST</div>
-              <div className="col-span-4 text-right">{formatCurrency(totals.taxableAmount, business.currency)}</div>
-              <div className="col-span-2 text-center">{sgstRate.toFixed(1)}%</div>
-              <div className="col-span-4 text-right">{formatCurrency(sgstAmount, business.currency)}</div>
+            <div className="grid grid-cols-2 gap-3 border-b border-gray-300 py-2 text-xs text-gray-900">
+              <div className="text-left">SGST</div>
+              <div className="text-right">{formatCurrency(sgstAmount, business.currency)}</div>
             </div>
 
             {/* CGST Row */}
-            <div className="grid grid-cols-12 gap-3 py-2 text-xs text-gray-900">
-              <div className="col-span-2 text-left">CGST</div>
-              <div className="col-span-4 text-right">{formatCurrency(totals.taxableAmount, business.currency)}</div>
-              <div className="col-span-2 text-center">{cgstRate.toFixed(1)}%</div>
-              <div className="col-span-4 text-right">{formatCurrency(cgstAmount, business.currency)}</div>
+            <div className="grid grid-cols-2 gap-3 py-2 text-xs text-gray-900">
+              <div className="text-left">CGST</div>
+              <div className="text-right">{formatCurrency(cgstAmount, business.currency)}</div>
             </div>
           </div>
           <div className="px-6 py-4">

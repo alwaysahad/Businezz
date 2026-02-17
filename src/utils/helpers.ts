@@ -54,10 +54,18 @@ export const formatDate = (date: string | Date | null | undefined, format: DateF
 // Calculate invoice totals with per-item discount and tax support
 export const calculateInvoiceTotals = (
   items: InvoiceItem[],
-  taxRate: number = 0,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  taxRate: number = 0, // Kept for backward compatibility but not used
   discount: number = 0
 ): InvoiceTotals => {
-  // Calculate per-item totals first
+  // Calculate subtotal (sum of item prices before any discounts/taxes)
+  const rawSubtotal = items.reduce((sum, item) => {
+    const qty = parseFloat(String(item.quantity)) || 0;
+    const price = parseFloat(String(item.price)) || 0;
+    return sum + (qty * price);
+  }, 0);
+
+  // Calculate per-item totals with their individual discounts and taxes
   const itemTotals = items.map(item => {
     const qty = parseFloat(String(item.quantity)) || 0;
     const price = parseFloat(String(item.price)) || 0;
@@ -70,25 +78,31 @@ export const calculateInvoiceTotals = (
     const itemTaxAmount = (itemTaxable * itemTaxRate) / 100;
     const itemTotal = itemTaxable + itemTaxAmount;
 
-    return itemTotal;
+    return {
+      total: itemTotal,
+      taxAmount: itemTaxAmount,
+      discountAmount: itemDiscountAmount,
+      taxable: itemTaxable
+    };
   });
 
-  // Sum all item totals to get invoice subtotal
-  const subtotal = itemTotals.reduce((sum, total) => sum + total, 0);
+  // Sum all item totals
+  const subtotalAfterItemDiscounts = itemTotals.reduce((sum, item) => sum + item.taxable, 0);
+  const totalItemTax = itemTotals.reduce((sum, item) => sum + item.taxAmount, 0);
+  const totalItemDiscount = itemTotals.reduce((sum, item) => sum + item.discountAmount, 0);
+  const totalBeforeInvoiceDiscount = itemTotals.reduce((sum, item) => sum + item.total, 0);
 
-  // Apply invoice-level discount and tax
-  const discountAmount = (subtotal * (parseFloat(String(discount)) || 0)) / 100;
-  const taxableAmount = subtotal - discountAmount;
-  const taxAmount = (taxableAmount * (parseFloat(String(taxRate)) || 0)) / 100;
-  const exactTotal = taxableAmount + taxAmount;
+  // Apply invoice-level discount (on the already-taxed total)
+  const invoiceDiscountAmount = (totalBeforeInvoiceDiscount * (parseFloat(String(discount)) || 0)) / 100;
+  const exactTotal = totalBeforeInvoiceDiscount - invoiceDiscountAmount;
   const roundedTotal = Math.round(exactTotal);
   const roundOff = roundedTotal - exactTotal;
 
   return {
-    subtotal,
-    discountAmount,
-    taxableAmount,
-    taxAmount,
+    subtotal: rawSubtotal,
+    discountAmount: totalItemDiscount + invoiceDiscountAmount,
+    taxableAmount: subtotalAfterItemDiscounts,
+    taxAmount: totalItemTax,
     roundOff,
     total: roundedTotal,
   };

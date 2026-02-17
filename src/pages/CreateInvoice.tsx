@@ -82,7 +82,6 @@ function CreateInvoice() {
         setInvoice(prev => ({
           ...prev,
           invoiceNumber: prev.invoiceNumber || nextInvoiceNumber,
-          taxRate: prev.taxRate || business.taxRate || settings.taxRate || 0,
         }));
       }
     }
