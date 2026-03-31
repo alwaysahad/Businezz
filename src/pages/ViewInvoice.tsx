@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency, formatDate, calculateInvoiceTotals, numberToWords, getStatusColor, getStatusLabel } from '../utils/helpers';
 import { usePDFGenerator } from '../hooks/usePDFGenerator';
-import type { Invoice, InvoiceStatus } from '../types';
+import type { Invoice, InvoiceItem, InvoiceStatus } from '../types';
 import { useInvoice, useBusiness, useSettings } from '../hooks/useData';
 
 interface StatusOption {
@@ -83,6 +83,12 @@ function ViewInvoice() {
       window.open(url, '_blank');
       // Cleanup URL after a delay
       setTimeout(() => URL.revokeObjectURL(url), 100);
+
+      // Auto-mark invoice as paid after printing
+      if (invoice.status !== 'paid') {
+        const updatedInvoice: Invoice = { ...invoice, status: 'paid' };
+        await saveInvoice(updatedInvoice);
+      }
     } catch (error) {
       console.error('Failed to open PDF:', error);
     }
@@ -303,7 +309,7 @@ function ViewInvoice() {
               </tr>
             </thead>
             <tbody>
-              {invoice.items.map((item, index) => {
+              {invoice.items.map((item: InvoiceItem, index: number) => {
 
                 const qty = Number(item.quantity);
                 const price = Number(item.price);
