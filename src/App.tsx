@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react';
 const Landing = lazy(() => import('./pages/Landing'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Invoices = lazy(() => import('./pages/Invoices'));
+const Trash = lazy(() => import('./pages/Trash'));
 const CreateInvoice = lazy(() => import('./pages/CreateInvoice'));
 const ViewInvoice = lazy(() => import('./pages/ViewInvoice'));
 const Products = lazy(() => import('./pages/Products'));
@@ -71,6 +72,7 @@ function App() {
                           <Route path="/new" element={<CreateInvoice />} />
                           <Route path="/edit/:id" element={<CreateInvoice />} />
                           <Route path="/view/:id" element={<ViewInvoice />} />
+                          <Route path="/trash" element={<Trash />} />
                         </Routes>
                       </Suspense>
                     </Layout>

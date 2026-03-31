@@ -23,9 +23,33 @@ export const invoiceDB = {
     const { data, error } = await supabase
       .from(TABLES.INVOICES)
       .select('*')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []).map(mapFromDB);
+  },
+
+  async getDeleted(): Promise<Invoice[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from(TABLES.INVOICES)
+      .select('*')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+    if (error) throw error;
+    return (data || []).map(mapFromDB);
+  },
+
+  async purgeOldDeleted(): Promise<void> {
+    if (!supabase) return;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const { error } = await supabase
+      .from(TABLES.INVOICES)
+      .delete()
+      .not('deleted_at', 'is', null)
+      .lt('deleted_at', thirtyDaysAgo.toISOString());
+    if (error) throw error;
   },
 
   async getById(id: string): Promise<Invoice | null> {
@@ -54,12 +78,39 @@ export const invoiceDB = {
     return mapFromDB(data);
   },
 
+  async softDelete(id: string): Promise<void> {
+    if (!supabase) throw new Error('Database not configured');
+    const { error } = await supabase
+      .from(TABLES.INVOICES)
+      .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async restore(id: string): Promise<void> {
+    if (!supabase) throw new Error('Database not configured');
+    const { error } = await supabase
+      .from(TABLES.INVOICES)
+      .update({ deleted_at: null, updated_at: new Date().toISOString() })
+      .eq('id', id);
+    if (error) throw error;
+  },
+
   async delete(id: string): Promise<void> {
     if (!supabase) throw new Error('Database not configured');
     const { error } = await supabase
       .from(TABLES.INVOICES)
       .delete()
       .eq('id', id);
+    if (error) throw error;
+  },
+
+  async purgeAllDeleted(): Promise<void> {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from(TABLES.INVOICES)
+      .delete()
+      .not('deleted_at', 'is', null);
     if (error) throw error;
   },
 };
@@ -306,6 +357,7 @@ function mapFromDB(data: Record<string, unknown>): Invoice {
     status: data.status as Invoice['status'],
     createdAt: data.created_at as string,
     updatedAt: data.updated_at as string,
+    deletedAt: data.deleted_at as string | null,
   };
 }
 
@@ -326,6 +378,7 @@ function mapToDB(invoice: Invoice): Record<string, unknown> {
     status: invoice.status,
     created_at: invoice.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
+    deleted_at: invoice.deletedAt || null,
   };
 }
 

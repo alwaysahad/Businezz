@@ -11,6 +11,7 @@ export const queryKeys = {
     products: ['products'] as const,
     business: ['business'] as const,
     settings: ['settings'] as const,
+    trashInvoices: ['trashInvoices'] as const,
 };
 
 export function useInvoices() {
@@ -20,13 +21,18 @@ export function useInvoices() {
     // Fetch all invoices with React Query
     const { data: invoices = [], isLoading: loading, error } = useQuery({
         queryKey: queryKeys.invoices,
-        queryFn: () => invoiceDB.getAll(),
+        queryFn: async () => {
+             // Purge deleted ones older than 30 days
+             invoiceDB.purgeOldDeleted().catch(console.error);
+             return invoiceDB.getAll();
+        },
         staleTime: 5 * 60 * 1000, // 5 minutes
     });
 
     // Refetch when sync happens
     if (lastSyncTime) {
         queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+        queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
     }
 
     // Save invoice mutation with optimistic update
@@ -84,6 +90,38 @@ export function useInvoices() {
         },
         onSettled: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+            queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
+        },
+    });
+
+    const softDeleteInvoiceMutation = useMutation({
+        mutationFn: (id: string) => invoiceDB.softDelete(id),
+        onMutate: async (deletedId) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.invoices });
+            const previousInvoices = queryClient.getQueryData<Invoice[]>(queryKeys.invoices);
+
+            queryClient.setQueryData<Invoice[]>(queryKeys.invoices, (old = []) =>
+                old.filter(i => i.id !== deletedId)
+            );
+
+            return { previousInvoices };
+        },
+        onError: (_err, _id, context) => {
+            if (context?.previousInvoices) {
+                queryClient.setQueryData(queryKeys.invoices, context.previousInvoices);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+            queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
+        },
+    });
+
+    const restoreInvoiceMutation = useMutation({
+        mutationFn: (id: string) => invoiceDB.restore(id),
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+            queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
         },
     });
 
@@ -95,7 +133,96 @@ export function useInvoices() {
         error: error as Error | null,
         refresh,
         saveInvoice: saveInvoiceMutation.mutateAsync,
-        deleteInvoice: deleteInvoiceMutation.mutateAsync
+        deleteInvoice: deleteInvoiceMutation.mutateAsync,
+        softDeleteInvoice: softDeleteInvoiceMutation.mutateAsync,
+        restoreInvoice: restoreInvoiceMutation.mutateAsync,
+    };
+}
+
+export function useTrashInvoices() {
+    const { lastSyncTime } = useSync();
+    const queryClient = useQueryClient();
+
+    const { data: invoices = [], isLoading: loading, error } = useQuery({
+        queryKey: queryKeys.trashInvoices,
+        queryFn: () => invoiceDB.getDeleted(),
+        staleTime: 5 * 60 * 1000,
+    });
+
+    if (lastSyncTime) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
+    }
+
+    const restoreInvoiceMutation = useMutation({
+        mutationFn: (id: string) => invoiceDB.restore(id),
+        onMutate: async (restoredId) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.trashInvoices });
+            const previousTrash = queryClient.getQueryData<Invoice[]>(queryKeys.trashInvoices);
+
+            queryClient.setQueryData<Invoice[]>(queryKeys.trashInvoices, (old = []) =>
+                old.filter(i => i.id !== restoredId)
+            );
+
+            return { previousTrash };
+        },
+        onError: (_err, _id, context) => {
+            if (context?.previousTrash) {
+                queryClient.setQueryData(queryKeys.trashInvoices, context.previousTrash);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.invoices });
+            queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
+        },
+    });
+
+    const hardDeleteInvoiceMutation = useMutation({
+        mutationFn: (id: string) => invoiceDB.delete(id),
+        onMutate: async (deletedId) => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.trashInvoices });
+            const previousTrash = queryClient.getQueryData<Invoice[]>(queryKeys.trashInvoices);
+
+            queryClient.setQueryData<Invoice[]>(queryKeys.trashInvoices, (old = []) =>
+                old.filter(i => i.id !== deletedId)
+            );
+
+            return { previousTrash };
+        },
+        onError: (_err, _id, context) => {
+            if (context?.previousTrash) {
+                queryClient.setQueryData(queryKeys.trashInvoices, context.previousTrash);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
+        },
+    });
+
+    const emptyTrashMutation = useMutation({
+        mutationFn: () => invoiceDB.purgeAllDeleted(),
+        onMutate: async () => {
+            await queryClient.cancelQueries({ queryKey: queryKeys.trashInvoices });
+            const previousTrash = queryClient.getQueryData<Invoice[]>(queryKeys.trashInvoices);
+            queryClient.setQueryData<Invoice[]>(queryKeys.trashInvoices, []);
+            return { previousTrash };
+        },
+        onError: (_err, _vars, context) => {
+            if (context?.previousTrash) {
+                queryClient.setQueryData(queryKeys.trashInvoices, context.previousTrash);
+            }
+        },
+        onSettled: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.trashInvoices });
+        },
+    });
+
+    return {
+        invoices,
+        loading,
+        error: error as Error | null,
+        restoreInvoice: restoreInvoiceMutation.mutateAsync,
+        hardDeleteInvoice: hardDeleteInvoiceMutation.mutateAsync,
+        emptyTrash: emptyTrashMutation.mutateAsync,
     };
 }
 

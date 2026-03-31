@@ -27,6 +27,7 @@ export interface Invoice {
   createdAt?: string;
   updatedAt?: string;
   user_id?: string;
+  deletedAt?: string | null;
 }
 
 // Customer Types

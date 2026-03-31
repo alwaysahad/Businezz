@@ -1,5 +1,6 @@
 import { useState, useMemo, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { UndoToast } from '../components/UndoToast';
 import {
   Plus,
   Search,
@@ -14,7 +15,7 @@ import {
   SortDesc,
   Loader2,
 } from 'lucide-react';
-import { useInvoices, useBusiness, useSettings } from '../hooks/useData';
+import { useInvoices, useTrashInvoices, useBusiness, useSettings } from '../hooks/useData';
 import { usePDFGenerator } from '../hooks/usePDFGenerator';
 import { formatDate, formatCurrency, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
 import type { Invoice, InvoiceStats } from '../types';
@@ -24,7 +25,8 @@ type SortOrder = 'asc' | 'desc';
 type StatusFilter = 'all' | 'draft' | 'pending' | 'paid' | 'overdue';
 
 function Invoices() {
-  const { invoices, loading: invoicesLoading, deleteInvoice } = useInvoices();
+  const { invoices, loading: invoicesLoading, softDeleteInvoice, restoreInvoice } = useInvoices();
+  const { invoices: trashInvoices } = useTrashInvoices();
   const { business, loading: businessLoading } = useBusiness();
   const { settings, loading: settingsLoading } = useSettings();
   const { downloadPDF } = usePDFGenerator();
@@ -38,6 +40,7 @@ function Invoices() {
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [undoInfo, setUndoInfo] = useState<{ id: string; message: string } | null>(null);
 
   const filteredInvoices = useMemo((): Invoice[] => {
     let result = [...invoices];
@@ -96,9 +99,10 @@ function Invoices() {
   const handleDelete = async (id: string): Promise<void> => {
     setDeletingId(id);
     try {
-      await deleteInvoice(id);
+      await softDeleteInvoice(id);
+      setUndoInfo({ id, message: 'Invoice moved to trash' });
     } catch (error) {
-      console.error('Failed to delete invoice:', error);
+      console.error('Failed to move invoice to trash:', error);
     } finally {
       setDeletingId(null);
       setDeleteConfirm(null);
@@ -147,10 +151,21 @@ function Invoices() {
           <h1 className="text-2xl font-display font-bold text-white">Invoices</h1>
           <p className="text-midnight-400">{filteredInvoices.length} of {invoices.length} invoices</p>
         </div>
-        <Link to="/invoices/new" className="btn-primary flex items-center gap-2 self-start">
-          <Plus className="w-5 h-5" />
-          <span>New Invoice</span>
-        </Link>
+        <div className="flex items-center gap-3 self-start">
+          <Link to="/invoices/trash" className="btn-secondary flex items-center gap-2 border-midnight-700 bg-midnight-800/50 hover:bg-midnight-700 relative">
+            <Trash2 className="w-4 h-4 text-midnight-400" />
+            <span className="text-midnight-300">Trash</span>
+            {trashInvoices.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 min-w-[20px] text-center rounded-full text-xs font-medium bg-coral-500/20 text-coral-400">
+                {trashInvoices.length}
+              </span>
+            )}
+          </Link>
+          <Link to="/invoices/new" className="btn-primary flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            <span>New Invoice</span>
+          </Link>
+        </div>
       </div>
 
       {/* Stats Tabs */}
@@ -322,8 +337,8 @@ function Invoices() {
       {deleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
           <div className="glass rounded-2xl p-6 max-w-md w-full animate-scale-in">
-            <h3 className="text-xl font-semibold text-white mb-2">Delete Invoice?</h3>
-            <p className="text-midnight-400 mb-6">This action cannot be undone.</p>
+            <h3 className="text-xl font-semibold text-white mb-2">Move Invoice to Trash?</h3>
+            <p className="text-midnight-400 mb-6">You can restore it later from the Trash Bin.</p>
             <div className="flex gap-3 justify-end">
               <button onClick={() => setDeleteConfirm(null)} className="btn-secondary" disabled={deletingId !== null}>Cancel</button>
               <button onClick={() => handleDelete(deleteConfirm)} className="btn-danger" disabled={deletingId !== null}>
@@ -332,6 +347,17 @@ function Invoices() {
             </div>
           </div>
         </div>
+      )}
+
+      {undoInfo && (
+        <UndoToast
+          message={undoInfo.message}
+          onUndo={() => {
+            restoreInvoice(undoInfo.id);
+            setUndoInfo(null);
+          }}
+          onDismiss={() => setUndoInfo(null)}
+        />
       )}
     </div>
   );

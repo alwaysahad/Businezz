@@ -96,6 +96,26 @@ class OfflineDatabase {
         return this.getAll<Invoice>('invoices', userId);
     }
 
+    async getDeletedInvoices(userId: string): Promise<Invoice[]> {
+        const invoices = await this.getAll<Invoice>('invoices', userId);
+        return invoices.filter(inv => inv.deletedAt);
+    }
+
+    async purgeDeletedInvoices(userId: string): Promise<void> {
+        const db = this.ensureDB();
+        const invoices = await this.getAll<Invoice>('invoices', userId);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const tx = db.transaction('invoices', 'readwrite');
+        for (const invoice of invoices) {
+            if (invoice.deletedAt && new Date(invoice.deletedAt) < thirtyDaysAgo) {
+                await tx.store.delete(invoice.id);
+            }
+        }
+        await tx.done;
+    }
+
     async saveInvoice(invoice: Invoice): Promise<void> {
         await this.put('invoices', invoice);
     }
