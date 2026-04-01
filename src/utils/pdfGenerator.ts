@@ -49,16 +49,12 @@ const formatPDFCurrency = (amount: number | string, currency: string = 'Rs.'): s
   return `${currencySymbol} ${num.toFixed(2)}`;
 };
 
-// Helper function to check if content fits on current page and add new page if needed
 const checkAndAddPage = (doc: jsPDF, currentY: number, requiredSpace: number, margin: number = 15): number => {
   const pageHeight = doc.internal.pageSize.getHeight();
-  const bottomMargin = 20; // Reserve space at bottom of page
-
-  if (currentY + requiredSpace > pageHeight - bottomMargin) {
+  if (currentY + requiredSpace > pageHeight - 10) {
     doc.addPage();
-    return margin; // Return to top margin on new page
+    return margin;
   }
-
   return currentY;
 };
 
@@ -245,15 +241,14 @@ export const generateInvoicePDF = (
     },
   });
 
-  y = doc.lastAutoTable.finalY + 5;
+  y = doc.lastAutoTable.finalY + 3;
 
-  // Check if we need a new page for the summary section (needs ~30 units)
   y = checkAndAddPage(doc, y, 30, margin);
 
   // Horizontal line
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
+  y += 6;
 
   // Tax Summary using autoTable (left side)
   const taxTableData = [
@@ -319,21 +314,25 @@ export const generateInvoicePDF = (
   // Horizontal line
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
+  y += 5;
 
-  // Calculate space needed for footer section
+  // Pre-compute text for footer
   const amountWords = `${numberToWords(Math.floor(totals.total))} Rupees only`;
-  const wordsLines = doc.splitTextToSize(amountWords, (pageWidth / 2) - margin - 10);
-  const notesLines = invoice.notes ? doc.splitTextToSize(invoice.notes, (pageWidth / 2) - margin - 10) : [];
-  const footerHeight = 15 + wordsLines.length * 4 + 10 + (notesLines.length * 4) + 35; // Space for words, terms, notes, and signature
+  const halfWidth = (pageWidth / 2) - margin - 10;
+  const wordsLines = doc.splitTextToSize(amountWords, halfWidth);
+  const notesLines = invoice.notes ? doc.splitTextToSize(invoice.notes, halfWidth) : [];
 
-  // Check if we need a new page for the footer section
+  // Estimate left-column height: heading(5) + words + gap(5) + terms heading(5) + notes
+  const leftHeight = 5 + wordsLines.length * 4 + 5 + 5 + (notesLines.length > 0 ? 2 + notesLines.length * 4 : 0);
+  // Estimate right-column height: "For:" line(8) + signature(20) + line(4) + label(4)
+  const rightHeight = 8 + (business.signature ? 20 : 15) + 8;
+  const footerHeight = Math.max(leftHeight, rightHeight);
+
   y = checkAndAddPage(doc, y, footerHeight, margin);
 
-  // Footer section - Two columns
   const footerStartY = y;
 
-  // Left column - Amount in words and Terms
+  // Left column - Amount in words
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.text('Invoice Amount In Words', leftColX, y);
@@ -344,40 +343,36 @@ export const generateInvoicePDF = (
   doc.text(wordsLines, leftColX, y);
   y += wordsLines.length * 4 + 5;
 
+  // Left column - Terms
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.text('Terms and conditions', leftColX, y);
   y += 5;
 
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-
   if (invoice.notes) {
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
     y += 2;
     doc.text(notesLines, leftColX, y);
     y += notesLines.length * 4;
   }
 
-  // Right column - Signature
+  // Right column - Signature (rendered at footerStartY)
   let sigY = footerStartY;
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.text(`For: ${business.name || 'Your Business Name'}`, rightColX, sigY);
-  sigY += 10;
+  sigY += 8;
 
-  // Add signature image if available
   if (business.signature) {
     try {
-      console.log('Adding signature to PDF:', { hasSignature: !!business.signature });
       doc.addImage(business.signature, 'PNG', rightColX + 15, sigY, 30, 15);
-      sigY += 20;
-    } catch (error) {
-      console.error('Failed to add signature to PDF:', error);
-      sigY += 15; // Add space even if signature fails
+      sigY += 18;
+    } catch {
+      sigY += 15;
     }
   } else {
-    console.log('Signature not added to PDF:', { hasSignature: !!business.signature });
-    sigY += 15; // Add space for signature line
+    sigY += 15;
   }
 
   doc.setLineWidth(0.3);
