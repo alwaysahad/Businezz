@@ -11,6 +11,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
   updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
+  /** Custom profile photo (data URL). Pass empty string to clear and use OAuth / Gravatar. */
+  updateProfileAvatar: (dataUrl: string | null) => Promise<{ error: AuthError | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -101,6 +103,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
+  const updateProfileAvatar = async (dataUrl: string | null) => {
+    if (!supabase) {
+      return { error: { message: 'Supabase not configured' } as AuthError };
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      data: { profile_avatar: dataUrl ?? '' },
+    });
+    if (!error) {
+      const { data: { user: next } } = await supabase.auth.getUser();
+      setUser(next ?? null);
+    }
+    return { error };
+  };
+
   const value = {
     user,
     session,
@@ -110,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signOut,
     resetPassword,
     updatePassword,
+    updateProfileAvatar,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

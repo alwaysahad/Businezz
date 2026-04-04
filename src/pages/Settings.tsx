@@ -7,26 +7,29 @@ import {
   Trash2,
   FileText,
   Loader2,
+  User,
   type LucideIcon,
 } from 'lucide-react';
 import type { Business, Settings as SettingsType } from '../types';
 import { useBusiness, useSettings } from '../hooks/useData';
-
+import { useAuth } from '../contexts/AuthContext';
+import { UserAvatar } from '../components/UserAvatar';
+import { resizeImageFileToJpegDataUrl } from '../utils/resizeAvatarImage';
 
 interface Tab {
-  id: 'business' | 'invoice';
+  id: 'profile' | 'business' | 'invoice';
   label: string;
   icon: LucideIcon;
 }
 
-
-
 const TABS: Tab[] = [
+  { id: 'profile', label: 'Profile', icon: User },
   { id: 'business', label: 'Business Profile', icon: Building2 },
   { id: 'invoice', label: 'Invoice Settings', icon: FileText },
 ];
 
 function Settings() {
+  const { user, updateProfileAvatar } = useAuth();
   const { business: businessData, loading: businessLoading, saveBusiness } = useBusiness();
   const { settings: settingsData, loading: settingsLoading, saveSettings } = useSettings();
 
@@ -46,7 +49,8 @@ function Settings() {
 
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'business' | 'invoice'>('business');
+  const [activeTab, setActiveTab] = useState<'profile' | 'business' | 'invoice'>('profile');
+  const [avatarBusy, setAvatarBusy] = useState(false);
 
   const handleBusinessChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
@@ -188,6 +192,38 @@ function Settings() {
     setSettings((prev) => ({ ...prev, showLogo: !prev.showLogo }));
   };
 
+  const handleProfileAvatarUpload = async (e: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || !file.type.startsWith('image/')) return;
+    setAvatarBusy(true);
+    try {
+      const dataUrl = await resizeImageFileToJpegDataUrl(file, 256, 0.82);
+      const { error } = await updateProfileAvatar(dataUrl);
+      if (error) {
+        alert(error.message);
+      }
+    } catch {
+      alert('Could not process the image. Try a smaller JPG or PNG.');
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const handleRemoveCustomAvatar = async (): Promise<void> => {
+    setAvatarBusy(true);
+    try {
+      const { error } = await updateProfileAvatar('');
+      if (error) alert(error.message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  const hasCustomAvatar =
+    typeof user?.user_metadata?.profile_avatar === 'string' &&
+    (user.user_metadata.profile_avatar as string).length > 0;
+
   if (businessLoading || settingsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -250,6 +286,53 @@ function Settings() {
           );
         })}
       </div>
+
+      {/* Profile photo */}
+      {activeTab === 'profile' && user && (
+        <div className="glass rounded-2xl p-6 max-w-xl">
+          <h2 className="text-lg font-semibold text-white mb-2">Profile photo</h2>
+          <p className="text-midnight-400 text-sm mb-6">
+            If you sign in with Google, your Google photo is used automatically. Otherwise we use{' '}
+            <a
+              href="https://gravatar.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-teal-400 hover:underline"
+            >
+              Gravatar
+            </a>{' '}
+            for your email (same as many Gmail-linked accounts). You can also upload a custom photo below.
+          </p>
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+            <UserAvatar user={user} size="lg" className="!w-20 !h-20 !text-lg ring-2 ring-white/15" />
+            <div className="flex flex-col gap-3">
+              <label className="btn-secondary flex items-center justify-center gap-2 cursor-pointer w-fit">
+                <Upload className="w-4 h-4" />
+                {avatarBusy ? 'Working…' : 'Upload photo'}
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  disabled={avatarBusy}
+                  onChange={handleProfileAvatarUpload}
+                />
+              </label>
+              {hasCustomAvatar && (
+                <button
+                  type="button"
+                  onClick={handleRemoveCustomAvatar}
+                  disabled={avatarBusy}
+                  className="text-sm text-coral-400 hover:text-coral-300 flex items-center gap-2 w-fit disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Remove custom photo (use Google / Gravatar)
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Business Profile Tab */}
       {activeTab === 'business' && (

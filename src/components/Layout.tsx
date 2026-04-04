@@ -11,7 +11,6 @@ import {
   Plus,
   Receipt,
   LogOut,
-  User,
   Cloud,
   CloudOff,
   CheckCircle,
@@ -22,6 +21,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useSync } from '../contexts/SyncProvider';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { UserAvatar } from './UserAvatar';
 
 interface NavItem {
   path: string;
@@ -204,9 +204,11 @@ function Layout({ children }: LayoutProps) {
                       }`}
                     title={sidebarCollapsed ? user.email || 'Account' : ''}
                   >
-                    <div className={`rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-10 lg:h-10' : 'w-8 h-8'}`}>
-                      <User className={`text-white transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
-                    </div>
+                    <UserAvatar
+                      user={user}
+                      size="sm"
+                      className={`flex-shrink-0 transition-all duration-300 ring-2 ring-white/10 ${sidebarCollapsed ? 'lg:w-10 lg:h-10' : ''}`}
+                    />
                     <div className={`flex-1 text-left transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
                       <p className="text-sm text-white font-medium truncate">{user.email}</p>
                       <p className="text-xs text-midnight-400 whitespace-nowrap">Account</p>
@@ -292,7 +294,7 @@ function Layout({ children }: LayoutProps) {
                 className="p-2 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors relative"
                 aria-label="User menu"
               >
-                <User className="w-5 h-5 text-white" />
+                <UserAvatar user={user} size="sm" className="!w-9 !h-9 ring-2 ring-white/15" />
                 {userMenuOpen && (
                   <>
                     <div

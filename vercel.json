@@ -5,5 +5,10 @@
     "framework": null,
     "regions": [
         "iad1"
+    ],
+    "routes": [
+        {
+            "src": "/(.*)", "destination": "/"
+        }
     ]
 }
