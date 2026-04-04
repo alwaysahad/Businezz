@@ -231,3 +231,29 @@ export const numberToWords = (num: number): string => {
 
   return words.trim();
 };
+
+/** Letters and digits only, for fuzzy matching across punctuation/spaces (e.g. "cs" → "C.S."). */
+function normalizeSearchText(s: string): string {
+  return s.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+}
+
+/**
+ * Substring search: tries a literal case-insensitive match first, then matches against
+ * letter/digit-only forms so queries like "cs" still hit names like "C.S.AWAI".
+ * User input is never interpreted as regex.
+ */
+export function matchesSubstringSearch(
+  haystack: string | null | undefined,
+  query: string
+): boolean {
+  const q = query.trim();
+  if (!q) return true;
+  if (haystack == null || haystack === '') return false;
+  const ql = q.toLocaleLowerCase();
+  const hl = haystack.toLocaleLowerCase();
+  if (hl.includes(ql)) return true;
+  const qn = normalizeSearchText(q);
+  const hn = normalizeSearchText(haystack);
+  if (!qn) return false;
+  return hn.includes(qn);
+}

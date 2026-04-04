@@ -30,7 +30,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/invoices', label: 'Invoices', icon: FileText },
   { path: '/products', label: 'Products', icon: Package },
   { path: '/customers', label: 'Customers', icon: Users },
@@ -81,8 +81,8 @@ function Layout({ children }: LayoutProps) {
   }, [sidebarCollapsed]);
 
   const isActive = (path: string): boolean => {
-    if (path === '/') return location.pathname === '/';
-    return location.pathname.startsWith(path);
+    const { pathname } = location;
+    return pathname === path || pathname.startsWith(`${path}/`);
   };
 
   const handleSignOut = async () => {

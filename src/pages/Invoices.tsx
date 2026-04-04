@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useInvoices, useTrashInvoices, useBusiness, useSettings } from '../hooks/useData';
 import { usePDFGenerator } from '../hooks/usePDFGenerator';
-import { formatDate, formatCurrency, calculateInvoiceTotals, getStatusColor, getStatusLabel } from '../utils/helpers';
+import { formatDate, formatCurrency, calculateInvoiceTotals, getStatusColor, getStatusLabel, matchesSubstringSearch } from '../utils/helpers';
 import type { Invoice, InvoiceStats } from '../types';
 
 type SortField = 'date' | 'amount' | 'customer' | 'number';
@@ -45,13 +45,12 @@ function Invoices() {
   const filteredInvoices = useMemo((): Invoice[] => {
     let result = [...invoices];
 
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+    if (searchQuery.trim()) {
       result = result.filter(
         (inv) =>
-          inv.customerName?.toLowerCase().includes(query) ||
-          inv.invoiceNumber?.toLowerCase().includes(query) ||
-          inv.customerEmail?.toLowerCase().includes(query)
+          matchesSubstringSearch(inv.customerName, searchQuery) ||
+          matchesSubstringSearch(inv.invoiceNumber, searchQuery) ||
+          matchesSubstringSearch(inv.customerEmail, searchQuery)
       );
     }
 

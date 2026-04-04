@@ -14,7 +14,7 @@ import {
   FileText,
   Loader2,
 } from 'lucide-react';
-import { generateId } from '../utils/helpers';
+import { generateId, matchesSubstringSearch } from '../utils/helpers';
 import type { Customer, CustomerFormData, FormErrors } from '../types';
 import { useCustomers, useInvoices } from '../hooks/useData';
 import { ModalPortal } from '../components/ModalPortal';
@@ -44,9 +44,9 @@ function Customers() {
 
   const filteredCustomers = customers.filter(
     (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone?.includes(searchQuery) ||
-      c.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      matchesSubstringSearch(c.name, searchQuery) ||
+      matchesSubstringSearch(c.phone, searchQuery) ||
+      matchesSubstringSearch(c.email, searchQuery)
   );
 
   const openModal = (customer: Customer | null = null): void => {

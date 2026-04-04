@@ -10,7 +10,7 @@ import {
   Loader2,
   Receipt,
 } from 'lucide-react';
-import { generateId, formatCurrency, formatDate, calculateInvoiceTotals } from '../utils/helpers';
+import { generateId, formatCurrency, formatDate, calculateInvoiceTotals, matchesSubstringSearch } from '../utils/helpers';
 import type { Invoice, InvoiceItem, Customer, Product, FormErrors } from '../types';
 import { useInvoices, useInvoice, useCustomers, useProducts, useBusiness, useSettings } from '../hooks/useData';
 
@@ -92,17 +92,17 @@ function CreateInvoice() {
   }, [invoice.items, invoice.taxRate, invoice.discount]);
 
   const filteredCustomers = useMemo((): Customer[] => {
-    if (!customerSearch) return customers.slice(0, 5);
+    if (!customerSearch.trim()) return customers.slice(0, 5);
     return customers.filter(c =>
-      c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
-      c.phone?.includes(customerSearch)
+      matchesSubstringSearch(c.name, customerSearch) ||
+      matchesSubstringSearch(c.phone, customerSearch)
     ).slice(0, 5);
   }, [customers, customerSearch]);
 
   const filteredProducts = useMemo((): Product[] => {
-    if (!productSearch) return products.slice(0, 5);
+    if (!productSearch.trim()) return products.slice(0, 5);
     return products.filter(p =>
-      p.name.toLowerCase().includes(productSearch.toLowerCase())
+      matchesSubstringSearch(p.name, productSearch)
     ).slice(0, 5);
   }, [products, productSearch]);
 

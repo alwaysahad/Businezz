@@ -9,7 +9,7 @@ import {
   Save,
   Loader2,
 } from 'lucide-react';
-import { generateId, formatCurrency } from '../utils/helpers';
+import { generateId, formatCurrency, matchesSubstringSearch } from '../utils/helpers';
 import type { Product, ProductFormData, FormErrors } from '../types';
 import { useProducts, useBusiness } from '../hooks/useData';
 import { ModalPortal } from '../components/ModalPortal';
@@ -39,8 +39,8 @@ function Products() {
 
   const filteredProducts = products.filter(
     (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      matchesSubstringSearch(p.name, searchQuery) ||
+      matchesSubstringSearch(p.description, searchQuery)
   );
 
   const openModal = (product: Product | null = null): void => {
