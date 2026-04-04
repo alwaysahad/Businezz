@@ -277,124 +277,160 @@ function CreateInvoice() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Form */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Customer Details */}
-          <div className="glass rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <User className="w-5 h-5 text-teal-400" />
-              <h2 className="text-lg font-semibold text-white">Customer Details</h2>
+      <div className="space-y-6">
+        {/* Invoice + customer — compact top strip so items get full width below */}
+        <div className="glass rounded-2xl p-4 sm:p-6">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 xl:gap-8">
+            <div className="xl:col-span-4 space-y-4">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-teal-400" />
+                <h2 className="text-base font-semibold text-white">Invoice</h2>
+              </div>
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="min-w-0">
+                    <label className="input-label">Invoice Number</label>
+                    <input
+                      type="text"
+                      name="invoiceNumber"
+                      value={invoice.invoiceNumber}
+                      onChange={handleInputChange}
+                      className="input-field font-mono text-sm py-2.5 w-full"
+                    />
+                  </div>
+                  <div className="min-w-0 sm:min-w-[11rem]">
+                    <label className="input-label">Invoice date</label>
+                    <input
+                      type="date"
+                      name="date"
+                      value={invoice.date}
+                      onChange={handleInputChange}
+                      className="input-field text-sm py-2.5 w-full min-h-[44px] min-w-[10.5rem] [color-scheme:dark] pl-3 pr-10 tabular-nums"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="input-label">Invoice discount (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    name="discount"
+                    value={invoice.discount}
+                    onChange={handleInputChange}
+                    className="input-field text-sm py-2.5 w-full"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="relative sm:col-span-2">
-                <label className="input-label">Customer Name *</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    name="customerName"
-                    value={invoice.customerName}
-                    onChange={(e) => {
-                      handleInputChange(e);
-                      setCustomerSearch(e.target.value);
-                      setShowCustomerDropdown(true);
-                    }}
-                    onFocus={() => setShowCustomerDropdown(true)}
-                    className={`input-field ${errors.customerName ? 'border-coral-500' : ''}`}
-                    placeholder="Enter customer name"
-                  />
-                  {showCustomerDropdown && filteredCustomers.length > 0 && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-10"
-                        onClick={() => setShowCustomerDropdown(false)}
-                      />
-                      <div className="absolute z-20 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">
-                        {filteredCustomers.map((customer) => (
-                          <button
-                            key={customer.id}
-                            type="button"
-                            onClick={() => selectCustomer(customer)}
-                            className="w-full px-4 py-3 text-left hover:bg-midnight-700 transition-colors"
-                          >
-                            <p className="text-white font-medium">{customer.name}</p>
-                            {customer.phone && (
-                              <p className="text-midnight-400 text-sm">{customer.phone}</p>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </>
+            <div className="xl:col-span-8 space-y-4 xl:border-l xl:border-midnight-700/80 xl:pl-8">
+              <div className="flex items-center gap-2">
+                <User className="w-5 h-5 text-teal-400" />
+                <h2 className="text-base font-semibold text-white">Customer</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="relative sm:col-span-2">
+                  <label className="input-label">Name *</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="customerName"
+                      value={invoice.customerName}
+                      onChange={(e) => {
+                        handleInputChange(e);
+                        setCustomerSearch(e.target.value);
+                        setShowCustomerDropdown(true);
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      className={`input-field text-sm py-2.5 ${errors.customerName ? 'border-coral-500' : ''}`}
+                      placeholder="Customer name"
+                    />
+                    {showCustomerDropdown && filteredCustomers.length > 0 && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setShowCustomerDropdown(false)}
+                        />
+                        <div className="absolute z-20 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden max-h-56 overflow-y-auto">
+                          {filteredCustomers.map((customer) => (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              onClick={() => selectCustomer(customer)}
+                              className="w-full px-4 py-3 text-left hover:bg-midnight-700 transition-colors"
+                            >
+                              <p className="text-white font-medium">{customer.name}</p>
+                              {customer.phone && (
+                                <p className="text-midnight-400 text-sm">{customer.phone}</p>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  {errors.customerName && (
+                    <p className="text-coral-400 text-sm mt-1">{errors.customerName}</p>
                   )}
                 </div>
-                {errors.customerName && (
-                  <p className="text-coral-400 text-sm mt-1">{errors.customerName}</p>
-                )}
-              </div>
 
-              <div>
-                <label className="input-label">Phone</label>
-                <input
-                  type="tel"
-                  name="customerPhone"
-                  value={invoice.customerPhone}
-                  onChange={handleInputChange}
-                  className="input-field"
-                  placeholder="Phone number"
-                />
-              </div>
+                <div>
+                  <label className="input-label">Phone</label>
+                  <input
+                    type="tel"
+                    name="customerPhone"
+                    value={invoice.customerPhone}
+                    onChange={handleInputChange}
+                    className="input-field text-sm py-2.5"
+                    placeholder="Phone"
+                  />
+                </div>
 
-              <div>
-                <label className="input-label">Email</label>
-                <input
-                  type="email"
-                  name="customerEmail"
-                  value={invoice.customerEmail}
-                  onChange={handleInputChange}
-                  className="input-field"
-                  placeholder="Email address"
-                />
-              </div>
+                <div>
+                  <label className="input-label">Email</label>
+                  <input
+                    type="email"
+                    name="customerEmail"
+                    value={invoice.customerEmail}
+                    onChange={handleInputChange}
+                    className="input-field text-sm py-2.5"
+                    placeholder="Email"
+                  />
+                </div>
 
-              <div className="sm:col-span-2">
-                <label className="input-label">Address</label>
-                <textarea
-                  name="customerAddress"
-                  value={invoice.customerAddress}
-                  onChange={handleInputChange}
-                  className="input-field min-h-[60px] resize-none"
-                  placeholder="Customer address"
-                />
+                <div className="sm:col-span-2">
+                  <label className="input-label">Address</label>
+                  <textarea
+                    name="customerAddress"
+                    value={invoice.customerAddress}
+                    onChange={handleInputChange}
+                    className="input-field min-h-[52px] resize-y text-sm py-2.5"
+                    placeholder="Address"
+                  />
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Invoice Items - Enhanced Visibility */}
-          <div className="glass rounded-2xl p-6 ring-2 ring-teal-500/20">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
-                  <Receipt className="w-4 h-4 text-teal-400" />
-                </div>
-                <h2 className="text-lg font-semibold text-white">Items</h2>
+        {/* Line items — full width */}
+        <div className="glass rounded-2xl p-4 sm:p-6 lg:p-8 ring-2 ring-teal-500/20 min-w-0">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="w-8 h-8 rounded-lg bg-teal-500/20 flex items-center justify-center">
+                <Receipt className="w-4 h-4 text-teal-400" />
               </div>
-              <button
-                type="button"
-                onClick={addItem}
-                className="btn-secondary flex items-center gap-2 text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Add Item
-              </button>
+              <h2 className="text-lg font-semibold text-white">Line items</h2>
             </div>
 
             {errors.items && (
               <p className="text-coral-400 text-sm mb-4">{errors.items}</p>
             )}
 
-            {/* Table Header */}
-            <div className="hidden sm:grid sm:grid-cols-[auto_1fr_80px_60px_100px_80px_80px_100px_auto] gap-2 pb-2 border-b border-midnight-600 mb-2">
+            <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0 rounded-lg">
+            <div className="min-w-[720px]">
+            {/* Table Header — item name column gets more width on large screens */}
+            <div className="hidden sm:grid sm:grid-cols-[auto_minmax(0,2.5fr)_72px_56px_88px_72px_72px_88px_auto] gap-2 sm:gap-3 pb-2 border-b border-midnight-600 mb-2">
               <div className="text-midnight-400 text-xs font-medium">#</div>
               <div className="text-midnight-400 text-xs font-medium">Item Name</div>
               <div className="text-midnight-400 text-xs font-medium text-center">Qty</div>
@@ -411,7 +447,7 @@ function CreateInvoice() {
               {invoice.items.map((item, index) => (
                 <div
                   key={item.id}
-                  className="grid grid-cols-1 sm:grid-cols-[auto_1fr_80px_60px_100px_80px_80px_100px_auto] gap-2 py-2 border-b border-midnight-700/50 items-center"
+                  className="grid grid-cols-1 sm:grid-cols-[auto_minmax(0,2.5fr)_72px_56px_88px_72px_72px_88px_auto] gap-2 sm:gap-3 py-2 border-b border-midnight-700/50 items-center"
                 >
                   {/* Row Number */}
                   <div className="hidden sm:flex text-midnight-400 text-sm items-center">
@@ -541,6 +577,8 @@ function CreateInvoice() {
                 </div>
               ))}
             </div>
+            </div>
+            </div>
 
             {/* Add Item Button */}
             <button
@@ -553,80 +591,38 @@ function CreateInvoice() {
             </button>
           </div>
 
-          {/* Notes */}
-          <div className="glass rounded-2xl p-6">
+        {/* Notes + totals — secondary row, equal columns on large screens */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="glass rounded-2xl p-4 sm:p-6">
             <label className="input-label">Notes</label>
             <textarea
               name="notes"
               value={invoice.notes}
               onChange={handleInputChange}
-              className="input-field min-h-[80px] resize-none"
+              className="input-field min-h-[100px] resize-y"
               placeholder="Add any notes..."
             />
           </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <div className="glass rounded-2xl p-6 sticky top-4">
-            <h2 className="text-lg font-semibold text-white mb-4">Invoice Details</h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="input-label">Invoice Number</label>
-                <input
-                  type="text"
-                  name="invoiceNumber"
-                  value={invoice.invoiceNumber}
-                  onChange={handleInputChange}
-                  className="input-field font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="input-label">Invoice Date</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={invoice.date}
-                  onChange={handleInputChange}
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="input-label">Discount (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  name="discount"
-                  value={invoice.discount}
-                  onChange={handleInputChange}
-                  className="input-field"
-                />
-              </div>
-            </div>
-
-            {/* Totals */}
-            <div className="mt-6 pt-6 border-t border-midnight-600 space-y-3">
-              <div className="flex justify-between text-midnight-300">
+          <div className="glass rounded-2xl p-4 sm:p-6 lg:sticky lg:top-4 lg:self-start">
+            <h2 className="text-lg font-semibold text-white mb-4">Summary</h2>
+            <div className="space-y-3">
+              <div className="flex justify-between text-midnight-300 text-sm">
                 <span>Subtotal</span>
                 <span className="font-mono">{formatCurrency(totals.subtotal, business.currency)}</span>
               </div>
               {invoice.discount > 0 && (
-                <div className="flex justify-between text-midnight-300">
+                <div className="flex justify-between text-midnight-300 text-sm">
                   <span>Discount ({invoice.discount}%)</span>
                   <span className="font-mono text-coral-400">-{formatCurrency(totals.discountAmount, business.currency)}</span>
                 </div>
               )}
               {invoice.taxRate > 0 && (
-                <div className="flex justify-between text-midnight-300">
+                <div className="flex justify-between text-midnight-300 text-sm">
                   <span>{settings.taxLabel || 'Tax'} ({invoice.taxRate}%)</span>
                   <span className="font-mono">{formatCurrency(totals.taxAmount, business.currency)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-xl font-bold pt-3 border-t border-midnight-600">
+              <div className="flex justify-between text-xl font-bold pt-4 border-t border-midnight-600">
                 <span className="text-white">Total</span>
                 <span className="font-mono text-teal-400">{formatCurrency(totals.total, business.currency)}</span>
               </div>
