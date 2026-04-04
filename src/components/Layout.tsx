@@ -104,12 +104,12 @@ function Layout({ children }: LayoutProps) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar — fixed on all breakpoints so it stays visible while main content scrolls */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out group ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out group ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           } ${sidebarCollapsed ? 'lg:w-24' : 'w-72'}`}
       >
-        <div className="h-full flex flex-col glass rounded-r-2xl lg:rounded-2xl m-0 lg:m-4 relative">
+        <div className="h-full min-h-0 flex flex-col glass rounded-r-2xl lg:rounded-2xl m-0 lg:m-4 relative">
           {/* Logo */}
           <div className={`p-6 border-b border-white/10 transition-all duration-300 ${sidebarCollapsed ? 'lg:p-4 lg:pb-4' : ''}`}>
             <Link to="/dashboard" className={`flex items-center ${sidebarCollapsed ? 'lg:justify-center' : 'gap-3'}`}>
@@ -271,8 +271,12 @@ function Layout({ children }: LayoutProps) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 flex flex-col min-h-screen lg:p-4">
+      {/* Main content — offset on lg so it clears the fixed sidebar */}
+      <main
+        className={`flex-1 flex flex-col min-h-screen w-full min-w-0 lg:p-4 transition-[margin] duration-300 ease-in-out ${
+          sidebarCollapsed ? 'lg:ml-24' : 'lg:ml-72'
+        }`}
+      >
         {/* Mobile header */}
         <header className="lg:hidden flex items-center justify-between p-4 glass safe-area-top sticky top-0 z-30">
           <Link to="/dashboard" className="flex items-center gap-2">
