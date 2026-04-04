@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo, type ChangeEvent } from 'react';
+import { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback, type ChangeEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Plus,
@@ -50,6 +51,13 @@ function CreateInvoice() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  const itemNameInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [productDropdownPos, setProductDropdownPos] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+
   // Initialize form data
   useEffect(() => {
     if (isEditing) {
@@ -100,11 +108,38 @@ function CreateInvoice() {
   }, [customers, customerSearch]);
 
   const filteredProducts = useMemo((): Product[] => {
-    if (!productSearch.trim()) return products.slice(0, 5);
-    return products.filter(p =>
-      matchesSubstringSearch(p.name, productSearch)
-    ).slice(0, 5);
+    if (!productSearch.trim()) return products.slice(0, 8);
+    return products.filter((p) => matchesSubstringSearch(p.name, productSearch));
   }, [products, productSearch]);
+
+  const updateProductDropdownPosition = useCallback(() => {
+    const id = showProductDropdown;
+    if (!id) {
+      setProductDropdownPos(null);
+      return;
+    }
+    const input = itemNameInputRefs.current[id];
+    if (!input) return;
+    const r = input.getBoundingClientRect();
+    setProductDropdownPos({
+      top: r.bottom + 4,
+      left: r.left,
+      width: Math.max(r.width, 200),
+    });
+  }, [showProductDropdown]);
+
+  useLayoutEffect(() => {
+    updateProductDropdownPosition();
+  }, [updateProductDropdownPosition, productSearch, filteredProducts.length, invoice.items]);
+
+  useEffect(() => {
+    window.addEventListener('resize', updateProductDropdownPosition);
+    window.addEventListener('scroll', updateProductDropdownPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateProductDropdownPosition);
+      window.removeEventListener('scroll', updateProductDropdownPosition, true);
+    };
+  }, [updateProductDropdownPosition]);
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
     const { name, value } = e.target;
@@ -387,6 +422,9 @@ function CreateInvoice() {
                   <div className="relative">
                     <label className="sm:hidden text-midnight-400 text-xs mb-1 block">Item Name</label>
                     <input
+                      ref={(el) => {
+                        itemNameInputRefs.current[item.id] = el;
+                      }}
                       type="text"
                       value={item.name}
                       onChange={(e) => {
@@ -398,29 +436,6 @@ function CreateInvoice() {
                       className="w-full bg-midnight-800/50 border border-midnight-600 rounded-lg px-3 py-2 text-white text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500/20 transition-all"
                       placeholder="Enter item name"
                     />
-                    {showProductDropdown === item.id && filteredProducts.length > 0 && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setShowProductDropdown(null)}
-                        />
-                        <div className="absolute z-20 w-full mt-1 bg-midnight-800 border border-midnight-600 rounded-xl shadow-lg overflow-hidden">
-                          {filteredProducts.map((product) => (
-                            <button
-                              key={product.id}
-                              type="button"
-                              onClick={() => selectProduct(product, item.id)}
-                              className="w-full px-4 py-2 text-left hover:bg-midnight-700 transition-colors flex justify-between items-center"
-                            >
-                              <span className="text-white text-sm">{product.name}</span>
-                              <span className="text-teal-400 font-mono text-sm">
-                                {formatCurrency(product.price, business.currency)}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </>
-                    )}
                   </div>
 
                   {/* Quantity */}
@@ -642,6 +657,43 @@ function CreateInvoice() {
         </div>
       </div>
 
+      {showProductDropdown &&
+        filteredProducts.length > 0 &&
+        productDropdownPos &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-[100]"
+              aria-hidden
+              onClick={() => setShowProductDropdown(null)}
+            />
+            <div
+              role="listbox"
+              className="fixed z-[101] bg-midnight-800 border border-midnight-600 rounded-xl shadow-2xl max-h-[min(60vh,320px)] overflow-y-auto overscroll-contain py-1"
+              style={{
+                top: productDropdownPos.top,
+                left: productDropdownPos.left,
+                width: productDropdownPos.width,
+              }}
+            >
+              {filteredProducts.map((product) => (
+                <button
+                  key={product.id}
+                  type="button"
+                  role="option"
+                  onClick={() => selectProduct(product, showProductDropdown)}
+                  className="w-full px-4 py-2.5 text-left hover:bg-midnight-700 transition-colors flex justify-between items-start gap-3"
+                >
+                  <span className="text-white text-sm break-words min-w-0 text-left">{product.name}</span>
+                  <span className="text-teal-400 font-mono text-sm flex-shrink-0 tabular-nums">
+                    {formatCurrency(product.price, business.currency)}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 }
