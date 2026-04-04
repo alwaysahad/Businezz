@@ -17,6 +17,7 @@ import {
 import { generateId } from '../utils/helpers';
 import type { Customer, CustomerFormData, FormErrors } from '../types';
 import { useCustomers, useInvoices } from '../hooks/useData';
+import { ModalPortal } from '../components/ModalPortal';
 
 function Customers() {
   const { customers, loading, saveCustomer, deleteCustomer } = useCustomers();
@@ -248,7 +249,8 @@ function Customers() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+        <ModalPortal>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 overflow-y-auto">
           <div className="glass rounded-2xl p-6 max-w-md w-full animate-scale-in">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
@@ -318,11 +320,13 @@ function Customers() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Delete Confirmation */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+        <ModalPortal>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 overflow-y-auto">
           <div className="glass rounded-2xl p-6 max-w-md w-full animate-scale-in">
             <h3 className="text-xl font-semibold text-white mb-2">Delete Customer?</h3>
             <p className="text-midnight-400 mb-6">This customer will be permanently deleted.</p>
@@ -334,6 +338,7 @@ function Customers() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );

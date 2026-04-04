@@ -12,6 +12,7 @@ import {
 import { generateId, formatCurrency } from '../utils/helpers';
 import type { Product, ProductFormData, FormErrors } from '../types';
 import { useProducts, useBusiness } from '../hooks/useData';
+import { ModalPortal } from '../components/ModalPortal';
 
 const UNITS = ['piece', 'kg', 'g', 'liter', 'ml', 'dozen', 'box', 'pack', 'unit', 'hour', 'service'] as const;
 
@@ -224,7 +225,8 @@ function Products() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+        <ModalPortal>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 overflow-y-auto">
           <div className="glass rounded-2xl p-6 max-w-md w-full animate-scale-in">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-white">
@@ -315,11 +317,13 @@ function Products() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {/* Delete Confirmation */}
       {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70">
+        <ModalPortal>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 overflow-y-auto">
           <div className="glass rounded-2xl p-6 max-w-md w-full animate-scale-in">
             <h3 className="text-xl font-semibold text-white mb-2">Delete Product?</h3>
             <p className="text-midnight-400 mb-6">This product will be permanently deleted.</p>
@@ -331,6 +335,7 @@ function Products() {
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </div>
   );
