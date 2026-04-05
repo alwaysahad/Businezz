@@ -1,3 +1,5 @@
+import defaultTheme from 'tailwindcss/defaultTheme';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -14,6 +16,21 @@ export default {
       '2xl': '1536px',
     },
     extend: {
+      fontFamily: {
+        /** Single professional UI stack — headings use font-semibold / bold + tracking-tight */
+        sans: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+        display: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+        body: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+        brand: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+      },
+      fontSize: {
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+      },
+      letterSpacing: {
+        'display-tight': '-0.03em',
+        'heading': '-0.02em',
+      },
       colors: {
         'midnight': {
           50: '#f0f4f8',
@@ -64,12 +81,6 @@ export default {
           800: '#92400e',
           900: '#78350f',
         }
-      },
-      fontFamily: {
-        'brand': ['Space Grotesk', 'system-ui', 'sans-serif'],
-        'display': ['Playfair Display', 'Georgia', 'serif'],
-        'body': ['DM Sans', 'system-ui', 'sans-serif'],
-        'mono': ['JetBrains Mono', 'Consolas', 'monospace'],
       },
       boxShadow: {
         'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',

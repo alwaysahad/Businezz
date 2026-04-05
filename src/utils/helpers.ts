@@ -257,3 +257,19 @@ export function matchesSubstringSearch(
   if (!qn) return false;
   return hn.includes(qn);
 }
+
+/**
+ * First usable segment of a business name for greetings (skips M/S, Mr., etc.).
+ * Avoids awkward lines like "Welcome back, M/S!".
+ */
+export function getGreetingNameFromBusinessName(name: string | undefined | null): string | null {
+  if (!name?.trim()) return null;
+  const stripped = name
+    .trim()
+    .replace(/^(m\/s\.?|m\.?\s*\/\s*s\.?|mr\.?|mrs\.?|ms\.?|dr\.?|shri\.?|smt\.?)\s+/i, '')
+    .trim();
+  if (!stripped) return null;
+  const first = stripped.split(/\s+/).filter(Boolean)[0];
+  if (!first || first.length < 2) return null;
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
