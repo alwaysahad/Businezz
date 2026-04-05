@@ -31,6 +31,13 @@ export default {
         'display-tight': '-0.03em',
         'heading': '-0.02em',
       },
+      /** Sidebar rail: smooth deceleration (no snappy linear feel) */
+      transitionDuration: {
+        sidebar: '420ms',
+      },
+      transitionTimingFunction: {
+        sidebar: 'cubic-bezier(0.22, 1, 0.36, 1)',
+      },
       colors: {
         'midnight': {
           50: '#f0f4f8',

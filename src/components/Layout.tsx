@@ -43,27 +43,22 @@ interface LayoutProps {
 
 function Layout({ children }: LayoutProps) {
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    // Load desktop sidebar state from localStorage
     const saved = localStorage.getItem('sidebarCollapsed');
     return saved === 'true';
   });
   const [userSidebarPreference, setUserSidebarPreference] = useState<boolean | null>(null);
 
-  // Auto-collapse sidebar on invoice creation/edit pages
   useEffect(() => {
     const isInvoicePage = location.pathname === '/invoices/new' || location.pathname.startsWith('/invoices/edit/');
 
     if (isInvoicePage) {
-      // Save user's current preference if not already saved
       if (userSidebarPreference === null) {
         setUserSidebarPreference(sidebarCollapsed);
       }
-      // Auto-collapse sidebar
       setSidebarCollapsed(true);
     } else {
-      // Restore user's preference when leaving invoice pages
       if (userSidebarPreference !== null) {
         setSidebarCollapsed(userSidebarPreference);
         setUserSidebarPreference(null);
@@ -75,7 +70,6 @@ function Layout({ children }: LayoutProps) {
   const { user, signOut } = useAuth();
   const { syncStatus } = useSync();
 
-  // Save sidebar state to localStorage
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', String(sidebarCollapsed));
   }, [sidebarCollapsed]);
@@ -99,46 +93,94 @@ function Layout({ children }: LayoutProps) {
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 z-40 bg-midnight-950/70 backdrop-blur-sm lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden
         />
       )}
 
-      {/* Sidebar — fixed on all breakpoints so it stays visible while main content scrolls */}
+      {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 transform transition-all duration-300 ease-in-out group ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-          } ${sidebarCollapsed ? 'lg:w-24' : 'w-72'}`}
+        className={`fixed inset-y-0 left-0 z-50 will-change-[width,transform] transition-[width,transform] duration-sidebar ease-sidebar motion-reduce:transition-none motion-reduce:duration-0 group/sidebar ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        } ${sidebarCollapsed ? 'lg:w-28' : 'w-72'}`}
       >
-        <div className="h-full min-h-0 flex flex-col glass rounded-r-2xl lg:rounded-2xl m-0 lg:m-4 relative">
-          {/* Logo */}
-          <div className={`p-6 border-b border-white/10 transition-all duration-300 ${sidebarCollapsed ? 'lg:p-4 lg:pb-4' : ''}`}>
-            <Link to="/dashboard" className={`flex items-center ${sidebarCollapsed ? 'lg:justify-center' : 'gap-3'}`}>
-              <div className={`rounded-xl bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center shadow-glow transition-all duration-300 ${sidebarCollapsed ? 'lg:w-12 lg:h-12' : 'w-10 h-10'}`}>
-                <Receipt className={`text-white transition-all duration-300 ${sidebarCollapsed ? 'lg:w-6 lg:h-6' : 'w-5 h-5'}`} />
-              </div>
-              <div className={`transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
-                <h1 className="text-xl font-brand font-bold text-white whitespace-nowrap tracking-tight">Businezz</h1>
-                <p className="text-xs text-midnight-400 whitespace-nowrap">Smart Billing</p>
-              </div>
-            </Link>
+        <div
+          className={`relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border-r border-white/[0.07] bg-gradient-to-b from-midnight-800/95 via-midnight-900/98 to-midnight-950 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:m-4 lg:rounded-2xl lg:border lg:border-white/[0.08] lg:shadow-2xl lg:shadow-black/50`}
+        >
+          {/* Desktop: logo only when sidebar expanded; collapse/expand always */}
+          <div
+            className={`hidden shrink-0 border-b border-white/[0.06] bg-midnight-950/20 lg:flex lg:items-center ${
+              sidebarCollapsed ? 'lg:justify-center lg:px-3 lg:py-2.5' : 'lg:gap-3 lg:px-4 lg:py-3.5'
+            }`}
+          >
+            {!sidebarCollapsed && (
+              <Link
+                to="/dashboard"
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-xl py-0.5 outline-none ring-teal-500/40 transition-colors focus-visible:ring-2"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 shadow-md shadow-teal-900/30 ring-1 ring-white/15">
+                  <Receipt className="h-5 w-5 shrink-0 text-white" />
+                </div>
+                <div className="min-w-0 flex flex-col justify-center">
+                  <h1 className="font-brand text-lg font-bold leading-tight tracking-tight text-white">Businezz</h1>
+                  <p className="mt-0.5 text-2xs font-medium uppercase leading-none tracking-wider text-midnight-400">
+                    Smart billing
+                  </p>
+                </div>
+              </Link>
+            )}
+            <button
+              type="button"
+              onClick={toggleDesktopSidebar}
+              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-midnight-800/90 p-0 text-midnight-200 shadow-md shadow-black/20 backdrop-blur-sm transition-colors duration-200 ease-sidebar hover:border-teal-500/30 hover:bg-midnight-700 hover:text-white active:scale-[0.96] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500/50 ${
+                sidebarCollapsed ? '' : 'lg:shrink-0'
+              }`}
+              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {sidebarCollapsed ? <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-sidebar ease-sidebar" strokeWidth={2} /> : <ChevronLeft className="h-4 w-4 shrink-0 transition-transform duration-sidebar ease-sidebar" strokeWidth={2} />}
+            </button>
           </div>
 
-          {/* New Invoice Button */}
-          <div className={`p-4 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-3 lg:py-4' : ''}`}>
+          {/* Primary CTA */}
+          <div
+            className={`shrink-0 transition-[padding] duration-sidebar ease-sidebar motion-reduce:transition-none ${
+              sidebarCollapsed ? 'px-3 pt-2 lg:flex lg:justify-center lg:px-3 lg:pt-1.5' : 'px-3 pt-3'
+            }`}
+          >
             <Link
               to="/invoices/new"
-              className={`flex items-center justify-center gap-2 btn-primary rounded-xl transition-all duration-300 hover:shadow-glow ${sidebarCollapsed ? 'lg:w-12 lg:h-12 lg:p-0 lg:mx-auto' : 'w-full py-3'}
-                }`}
               onClick={() => setSidebarOpen(false)}
-              title={sidebarCollapsed ? 'New Invoice' : ''}
+              title={sidebarCollapsed ? 'New invoice' : undefined}
+              className={`group/cta relative flex w-full min-w-0 items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-950/40 ring-1 ring-white/10 transition-all duration-sidebar ease-sidebar hover:from-teal-400 hover:to-teal-500 hover:shadow-teal-500/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400 active:scale-[0.98] ${
+                sidebarCollapsed ? 'lg:mx-auto lg:h-10 lg:w-10 lg:p-0' : 'px-4'
+              }`}
             >
-              <Plus className={`text-white transition-all duration-300 ${sidebarCollapsed ? 'lg:w-6 lg:h-6' : 'w-5 h-5'}`} />
-              <span className={`transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>New Invoice</span>
+              <Plus
+                className={`shrink-0 text-white transition-transform group-hover/cta:scale-110 ${
+                  sidebarCollapsed ? 'h-5 w-5' : 'h-5 w-5'
+                }`}
+              />
+              <span className={`truncate ${sidebarCollapsed ? 'lg:hidden' : ''}`}>New invoice</span>
             </Link>
           </div>
 
-          {/* Navigation */}
-          <nav className={`flex-1 py-2 space-y-2 overflow-y-auto transition-all duration-300 ${sidebarCollapsed ? 'lg:px-3' : 'px-4'}`}>
+          {/* Nav */}
+          <nav
+            aria-label="Main navigation"
+            className={`min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-4 transition-[padding] duration-sidebar ease-sidebar motion-reduce:transition-none ${
+              sidebarCollapsed
+                ? 'flex flex-col space-y-2 px-3 lg:items-center lg:space-y-2 lg:px-3'
+                : 'space-y-1 px-3'
+            }`}
+          >
+            <p
+              className={`mb-2 px-2 text-2xs font-semibold uppercase tracking-widest text-midnight-500 transition-all duration-sidebar ease-sidebar ${
+                sidebarCollapsed ? 'lg:h-0 lg:overflow-hidden lg:opacity-0 lg:mb-0' : ''
+              }`}
+            >
+              Workspace
+            </p>
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.path);
@@ -147,92 +189,142 @@ function Layout({ children }: LayoutProps) {
                   key={item.path}
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl transition-all duration-200 ${active
-                    ? 'bg-teal-500/20 text-teal-400 shadow-lg shadow-teal-500/10'
-                    : 'text-midnight-300 hover:bg-white/5 hover:text-white'
-                    } ${sidebarCollapsed ? 'lg:justify-center lg:w-12 lg:h-12 lg:p-0' : 'px-4 py-3'}`}
-                  title={sidebarCollapsed ? item.label : ''}
+                  title={sidebarCollapsed ? item.label : undefined}
+                  className={`group/nav relative flex items-center gap-3 rounded-xl text-sm font-medium transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500/60 ${
+                    sidebarCollapsed
+                      ? active
+                        ? 'justify-center px-0 py-1 text-white lg:bg-transparent lg:shadow-none lg:ring-0'
+                        : 'justify-center px-0 py-1 text-midnight-300 hover:text-white lg:hover:bg-white/[0.04]'
+                      : active
+                        ? 'bg-gradient-to-r from-teal-500/20 to-teal-600/5 px-3 py-2.5 text-white shadow-inner shadow-teal-950/20 ring-1 ring-teal-500/25'
+                        : 'px-3 py-2.5 text-midnight-300 hover:bg-white/[0.04] hover:text-white'
+                  }`}
                 >
-                  <Icon className={`transition-all duration-200 ${active ? 'text-teal-400' : ''} ${sidebarCollapsed ? 'lg:w-6 lg:h-6' : 'w-5 h-5'}`} />
-                  <span className={`font-medium transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                  <span
+                    className={`flex shrink-0 items-center justify-center rounded-xl transition-all ${
+                      sidebarCollapsed ? 'h-10 w-10' : 'h-9 w-9 rounded-lg'
+                    } ${
+                      active
+                        ? 'bg-teal-500/25 text-teal-100 ring-1 ring-teal-400/35 shadow-[0_0_0_1px_rgba(45,212,191,0.12)]'
+                        : 'bg-white/[0.05] text-midnight-400 group-hover/nav:bg-white/[0.08] group-hover/nav:text-midnight-200'
+                    }`}
+                  >
+                    <Icon
+                      className={sidebarCollapsed ? 'h-5 w-5' : 'h-[1.125rem] w-[1.125rem]'}
+                      strokeWidth={active ? 2.25 : 2}
+                    />
+                  </span>
+                  <span
+                    className={`min-w-0 truncate transition-all duration-sidebar ease-sidebar ${
+                      sidebarCollapsed ? 'lg:hidden' : 'flex-1'
+                    }`}
+                  >
                     {item.label}
                   </span>
                   {active && !sidebarCollapsed && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-teal-400 lg:block hidden animate-pulse" />
+                    <span
+                      className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-teal-400 shadow-[0_0_12px_rgba(45,212,191,0.45)]"
+                      aria-hidden
+                    />
                   )}
                 </Link>
               );
             })}
           </nav>
 
-          {/* User Menu / Footer */}
-          <div className={`p-4 border-t border-white/10 transition-all duration-300 ${sidebarCollapsed ? 'lg:px-3 lg:py-4' : ''}`}>
+          {/* Footer: sync + user */}
+          <div
+            className={`shrink-0 space-y-3 border-t border-white/[0.06] bg-midnight-950/30 transition-[padding] duration-sidebar ease-sidebar motion-reduce:transition-none ${
+              sidebarCollapsed ? 'p-3 lg:px-2.5 lg:py-3' : 'px-3 pb-4 pt-3'
+            }`}
+          >
             {isSupabaseConfigured && user ? (
-              <div className="space-y-3">
-                {/* Sync Status */}
-                <div className={`flex items-center gap-2 rounded-lg bg-midnight-800/50 transition-all duration-300 ${sidebarCollapsed ? 'lg:justify-center lg:w-12 lg:h-12 lg:mx-auto' : 'px-3 py-2'}
-                  }`}>
+              <div className={`space-y-3 ${sidebarCollapsed ? 'lg:flex lg:flex-col lg:items-center' : ''}`}>
+                <div
+                  className={`flex items-center gap-2 rounded-xl border border-white/[0.08] bg-midnight-900/50 transition-all duration-sidebar ease-sidebar ${
+                    sidebarCollapsed
+                      ? 'justify-center px-3 py-2 lg:mx-auto lg:h-10 lg:w-10 lg:px-0 lg:py-0'
+                      : 'px-3 py-2'
+                  }`}
+                  title={sidebarCollapsed ? (syncStatus === 'synced' ? 'Synced' : syncStatus === 'syncing' ? 'Syncing' : 'Idle') : undefined}
+                >
                   {syncStatus === 'synced' ? (
                     <>
-                      <CheckCircle className={`text-teal-400 flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
-                      <span className={`text-xs text-teal-400 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                      <CheckCircle className={`shrink-0 text-emerald-400 ${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'}`} />
+                      <span
+                        className={`text-2xs font-semibold uppercase tracking-wide text-emerald-400/90 ${
+                          sidebarCollapsed ? 'lg:hidden' : ''
+                        }`}
+                      >
                         Synced
                       </span>
                     </>
                   ) : syncStatus === 'syncing' ? (
                     <>
-                      <Cloud className={`text-blue-400 animate-pulse flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
-                      <span className={`text-xs text-blue-400 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
-                        Syncing...
+                      <Cloud className={`shrink-0 animate-pulse text-sky-400 ${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'}`} />
+                      <span
+                        className={`text-2xs font-semibold uppercase tracking-wide text-sky-400 ${
+                          sidebarCollapsed ? 'lg:hidden' : ''
+                        }`}
+                      >
+                        Syncing…
                       </span>
                     </>
                   ) : (
                     <>
-                      <Cloud className={`text-midnight-400 flex-shrink-0 transition-all duration-300 ${sidebarCollapsed ? 'lg:w-5 lg:h-5' : 'w-4 h-4'}`} />
-                      <span className={`text-xs text-midnight-400 transition-all duration-300 overflow-hidden whitespace-nowrap ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
+                      <Cloud className={`shrink-0 text-midnight-500 ${sidebarCollapsed ? 'h-5 w-5' : 'h-4 w-4'}`} />
+                      <span
+                        className={`text-2xs font-medium uppercase tracking-wide text-midnight-500 ${
+                          sidebarCollapsed ? 'lg:hidden' : ''
+                        }`}
+                      >
                         Idle
                       </span>
                     </>
                   )}
                 </div>
 
-                {/* User Info */}
-                <div className="relative">
+                <div className={`relative ${sidebarCollapsed ? 'lg:flex lg:w-full lg:justify-center' : 'w-full'}`}>
                   <button
+                    type="button"
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className={`flex items-center gap-3 rounded-lg hover:bg-white/5 transition-all duration-300 ${sidebarCollapsed ? 'lg:justify-center lg:w-12 lg:h-12 lg:mx-auto' : 'w-full px-3 py-2'}
-                      }`}
-                    title={sidebarCollapsed ? user.email || 'Account' : ''}
+                    className={`flex items-center gap-3 rounded-xl border border-white/[0.06] bg-midnight-900/40 text-left transition-colors hover:border-white/[0.1] hover:bg-white/[0.05] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-500/50 ${
+                      sidebarCollapsed
+                        ? 'w-full justify-center px-0 py-2 lg:mx-auto lg:h-10 lg:w-10 lg:shrink-0 lg:p-0'
+                        : 'w-full px-2 py-2'
+                    }`}
+                    title={sidebarCollapsed ? user.email || 'Account' : undefined}
+                    aria-expanded={userMenuOpen}
+                    aria-haspopup="menu"
                   >
                     <UserAvatar
                       user={user}
                       size="sm"
-                      className={`flex-shrink-0 transition-all duration-300 ring-2 ring-white/10 ${sidebarCollapsed ? 'lg:w-10 lg:h-10' : ''}`}
+                      className={`shrink-0 ring-2 ring-white/10 transition-all ${sidebarCollapsed ? '!h-8 !w-8 lg:!h-8 lg:!w-8' : ''}`}
                     />
-                    <div className={`flex-1 text-left transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:w-0 lg:opacity-0' : 'w-auto opacity-100'}`}>
-                      <p className="text-sm text-white font-medium truncate">{user.email}</p>
-                      <p className="text-xs text-midnight-400 whitespace-nowrap">Account</p>
+                    <div className={`min-w-0 flex-1 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
+                      <p className="truncate text-sm font-medium text-white">{user.email}</p>
+                      <p className="text-2xs font-medium text-midnight-500">Account</p>
                     </div>
                   </button>
 
-                  {/* Dropdown Menu */}
                   {userMenuOpen && (
                     <>
+                      <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} aria-hidden />
                       <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setUserMenuOpen(false)}
-                      />
-                      <div className={`absolute z-50 animate-fade-in glass rounded-lg shadow-lg ${sidebarCollapsed
-                        ? 'lg:bottom-0 lg:left-[calc(100%+8px)] bottom-full left-0 right-0 mb-2'
-                        : 'bottom-full left-0 right-0 mb-2'
-                        }`}>
+                        className={`absolute z-50 min-w-[11rem] animate-fade-in rounded-xl border border-white/10 bg-midnight-900/95 py-1 shadow-xl shadow-black/40 backdrop-blur-md ${
+                          sidebarCollapsed ? 'bottom-0 left-[calc(100%+10px)] lg:bottom-auto lg:left-full lg:ml-2 lg:mt-0' : 'bottom-full left-0 right-0 mb-2'
+                        }`}
+                        role="menu"
+                      >
                         <button
+                          type="button"
+                          role="menuitem"
                           onClick={handleSignOut}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-lg text-coral-400 hover:bg-coral-500/10 transition-colors ${sidebarCollapsed ? 'lg:w-auto' : 'w-full'
-                            }`}
+                          className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-coral-400 transition-colors hover:bg-coral-500/10"
                         >
-                          <LogOut className="w-4 h-4 flex-shrink-0" />
-                          <span className="text-sm font-medium whitespace-nowrap">Sign Out</span>
+                          <LogOut className="h-4 w-4 shrink-0" />
+                          Sign out
                         </button>
                       </div>
                     </>
@@ -240,78 +332,70 @@ function Layout({ children }: LayoutProps) {
                 </div>
               </div>
             ) : (
-              <div className={`text-center transition-all duration-300 ${sidebarCollapsed ? 'lg:px-0' : ''}`}>
+              <div className={`text-center transition-all duration-sidebar ease-sidebar ${sidebarCollapsed ? 'lg:px-0' : ''}`}>
                 {isSupabaseConfigured ? (
                   <div className="space-y-2">
-                    <CloudOff className="w-6 h-6 text-midnight-500 mx-auto" />
-                    <p className={`text-xs text-midnight-400 transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:h-0 lg:opacity-0' : 'h-auto opacity-100'}`}>
+                    <CloudOff className="mx-auto h-6 w-6 text-midnight-600" />
+                    <p
+                      className={`text-2xs text-midnight-500 transition-all duration-sidebar ease-sidebar ${
+                        sidebarCollapsed ? 'lg:h-0 lg:overflow-hidden lg:opacity-0' : ''
+                      }`}
+                    >
                       Not signed in
                     </p>
                   </div>
                 ) : (
-                  <p className={`text-xs text-midnight-400 transition-all duration-300 overflow-hidden ${sidebarCollapsed ? 'lg:h-0 lg:opacity-0' : 'h-auto opacity-100'}`}>
-                    Made with ❤️ for small businesses
+                  <p
+                    className={`text-2xs leading-relaxed text-midnight-500 transition-all duration-sidebar ease-sidebar ${
+                      sidebarCollapsed ? 'lg:h-0 lg:overflow-hidden lg:opacity-0' : ''
+                    }`}
+                  >
+                    Made with care for small businesses
                   </p>
                 )}
               </div>
             )}
           </div>
-
-          {/* Desktop Sidebar Toggle Button - Integrated into sidebar edge */}
-          <button
-            onClick={toggleDesktopSidebar}
-            className="hidden lg:flex absolute -right-3 top-4 items-center justify-center w-6 h-12 rounded-r-lg glass hover:bg-white/10 transition-all duration-300 shadow-lg opacity-0 group-hover:opacity-100 hover:!opacity-100 border-l-0"
-            aria-label="Toggle sidebar"
-            title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            {sidebarCollapsed ? (
-              <ChevronRight className="w-4 h-4 text-white" />
-            ) : (
-              <ChevronLeft className="w-4 h-4 text-white" />
-            )}
-          </button>
         </div>
       </aside>
 
-      {/* Main content — offset on lg so it clears the fixed sidebar */}
       <main
-        className={`flex-1 flex flex-col min-h-screen w-full min-w-0 lg:p-4 transition-[margin] duration-300 ease-in-out ${
-          sidebarCollapsed ? 'lg:ml-24' : 'lg:ml-72'
+        className={`flex min-h-screen min-w-0 flex-1 flex-col transition-[margin] duration-sidebar ease-sidebar motion-reduce:transition-none motion-reduce:duration-0 ${
+          sidebarCollapsed ? 'lg:ml-28' : 'lg:ml-72'
         }`}
       >
-        {/* Mobile header */}
-        <header className="lg:hidden flex items-center justify-between p-4 glass safe-area-top sticky top-0 z-30">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center">
-              <Receipt className="w-5 h-5 text-white" />
+        <header className="safe-area-top sticky top-0 z-30 flex items-center justify-between border-b border-white/[0.06] bg-midnight-900/80 px-4 py-3 backdrop-blur-lg lg:hidden">
+          <Link to="/dashboard" className="flex min-w-0 items-center gap-2.5 rounded-lg outline-none ring-teal-500/40 focus-visible:ring-2">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-teal-400 to-teal-700 shadow-md ring-1 ring-white/10">
+              <Receipt className="h-5 w-5 text-white" />
             </div>
-            <span className="font-brand font-bold text-white text-lg tracking-tight">Businezz</span>
+            <span className="truncate font-brand text-lg font-bold tracking-tight text-white">Businezz</span>
           </Link>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
             {isSupabaseConfigured && user && (
               <button
+                type="button"
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="p-2 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors relative"
-                aria-label="User menu"
+                className="relative rounded-xl p-2 text-white transition-colors hover:bg-white/10 active:bg-white/15"
+                aria-label="Account menu"
+                aria-expanded={userMenuOpen}
               >
-                <UserAvatar user={user} size="sm" className="!w-9 !h-9 ring-2 ring-white/15" />
+                <UserAvatar user={user} size="sm" className="!h-9 !w-9 ring-2 ring-white/15" />
                 {userMenuOpen && (
                   <>
-                    <div
-                      className="fixed inset-0 z-40"
-                      onClick={() => setUserMenuOpen(false)}
-                    />
-                    <div className="absolute top-full right-0 mt-2 glass rounded-lg p-2 z-50 animate-fade-in min-w-[200px]">
-                      <div className="px-3 py-2 border-b border-white/10 mb-2">
-                        <p className="text-sm text-white font-medium truncate">{user.email}</p>
-                        <p className="text-xs text-midnight-400">Account</p>
+                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} aria-hidden />
+                    <div className="absolute right-0 top-full z-50 mt-2 min-w-[14rem] animate-fade-in rounded-xl border border-white/10 bg-midnight-900/95 py-1 shadow-xl backdrop-blur-md">
+                      <div className="border-b border-white/10 px-3 py-2.5">
+                        <p className="truncate text-sm font-medium text-white">{user.email}</p>
+                        <p className="text-2xs font-medium text-midnight-500">Account</p>
                       </div>
                       <button
+                        type="button"
                         onClick={handleSignOut}
-                        className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-coral-400 hover:bg-coral-500/10 transition-colors"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium text-coral-400 transition-colors hover:bg-coral-500/10"
                       >
-                        <LogOut className="w-4 h-4" />
-                        <span className="text-sm font-medium">Sign Out</span>
+                        <LogOut className="h-4 w-4" />
+                        Sign out
                       </button>
                     </div>
                   </>
@@ -319,22 +403,19 @@ function Layout({ children }: LayoutProps) {
               </button>
             )}
             <button
+              type="button"
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-3 -mr-1 rounded-lg hover:bg-white/10 active:bg-white/20 transition-colors"
-              aria-label="Toggle menu"
+              className="rounded-xl p-3 text-white transition-colors hover:bg-white/10 active:bg-white/15"
+              aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={sidebarOpen}
             >
-              {sidebarOpen ? (
-                <X className="w-6 h-6 text-white" />
-              ) : (
-                <Menu className="w-6 h-6 text-white" />
-              )}
+              {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </header>
 
-        {/* Page content */}
-        <div className="flex-1 p-3 sm:p-4 lg:p-0 safe-area-bottom">
-          <div className="glass rounded-2xl min-h-full p-4 sm:p-6 lg:p-8 animate-fade-in">
+        <div className="flex-1 p-3 sm:p-4 lg:p-4 safe-area-bottom">
+          <div className="glass min-h-full rounded-2xl border border-white/[0.06] p-4 sm:p-6 lg:p-8 animate-fade-in">
             {children}
           </div>
         </div>
