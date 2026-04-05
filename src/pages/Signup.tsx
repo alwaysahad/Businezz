@@ -2,16 +2,32 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { UserPlus, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { isSupabaseConfigured } from '../lib/supabase';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { uploadLocalDataToCloud } from '../utils/migrationHelper';
 
 function Signup() {
     const navigate = useNavigate();
-    const { signUp } = useAuth();
+    const { signUp, signInWithGoogle } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
+
+    const handleGoogleSignUp = async (): Promise<void> => {
+        setError('');
+        setGoogleLoading(true);
+        try {
+            const { error: oauthError } = await signInWithGoogle();
+            if (oauthError) {
+                setError(oauthError.message);
+            }
+        } finally {
+            setGoogleLoading(false);
+        }
+    };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -68,6 +84,21 @@ function Signup() {
 
                 {/* Signup Form */}
                 <div className="glass rounded-2xl p-8">
+                    {isSupabaseConfigured && (
+                        <>
+                            <GoogleSignInButton
+                                onClick={() => void handleGoogleSignUp()}
+                                loading={googleLoading}
+                                disabled={loading}
+                                label="Continue with Google"
+                            />
+                            <div className="flex items-center gap-3 my-6">
+                                <div className="flex-1 h-px bg-midnight-600" />
+                                <span className="text-xs text-midnight-500 uppercase tracking-wide">or</span>
+                                <div className="flex-1 h-px bg-midnight-600" />
+                            </div>
+                        </>
+                    )}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
                             <div className="flex items-center gap-3 p-4 bg-coral-500/20 border border-coral-500/30 rounded-xl text-coral-400">
