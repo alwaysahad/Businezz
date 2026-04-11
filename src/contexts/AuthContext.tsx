@@ -20,6 +20,24 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** True on the first document load after redirect from Google / Supabase (PKCE or implicit). */
+const oauthReturnNeedsHardRefresh =
+  typeof window !== 'undefined' &&
+  (/[?&]code=/.test(window.location.search) ||
+    window.location.hash.includes('access_token'));
+
+let oauthHardRefreshScheduled = false;
+
+function stripOAuthParamsFromUrl() {
+  const u = new URL(window.location.href);
+  for (const p of ['code', 'state', 'error', 'error_description']) {
+    u.searchParams.delete(p);
+  }
+  const qs = u.search;
+  const path = u.pathname + (qs ? qs : '') + (u.hash.includes('access_token') ? '' : u.hash);
+  window.history.replaceState(null, '', path);
+}
+
 /** Clears React Query when the signed-in user changes so another account never sees cached data. */
 function AuthSessionQueryReset() {
   const queryClient = useQueryClient();
@@ -60,10 +78,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+
+      // After external OAuth, force a clean document + drop stale SW/Cache API entries (single-use ?code= is stripped first).
+      if (
+        event === 'SIGNED_IN' &&
+        session &&
+        oauthReturnNeedsHardRefresh &&
+        !oauthHardRefreshScheduled
+      ) {
+        oauthHardRefreshScheduled = true;
+        stripOAuthParamsFromUrl();
+        const clearCaches =
+          typeof caches !== 'undefined'
+            ? caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+            : Promise.resolve();
+        void clearCaches.then(() => {
+          window.location.reload();
+        });
+      }
     });
 
     return () => subscription.unsubscribe();

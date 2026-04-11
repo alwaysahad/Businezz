@@ -7,6 +7,13 @@ import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
+// OAuth round-trips (Google) often restore this tab from the back/forward cache, which resurrects an old JS bundle.
+window.addEventListener('pageshow', (event: PageTransitionEvent) => {
+  if (event.persisted) {
+    window.location.reload();
+  }
+});
+
 // Configure React Query with aggressive caching for instant navigation
 const queryClient = new QueryClient({
   defaultOptions: {
