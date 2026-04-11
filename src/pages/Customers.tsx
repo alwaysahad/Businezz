@@ -18,6 +18,52 @@ import { generateId, matchesSubstringSearch } from '../utils/helpers';
 import type { Customer, CustomerFormData, FormErrors } from '../types';
 import { useCustomers, useInvoices } from '../hooks/useData';
 import { ModalPortal } from '../components/ModalPortal';
+import { Skeleton } from '../components/ui/Skeleton';
+
+function CustomersSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <Skeleton className="h-8 w-32 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <Skeleton className="h-10 w-36 rounded-xl self-start" />
+      </div>
+
+      <div className="relative">
+        <Skeleton className="h-12 w-full rounded-xl" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="glass rounded-xl p-5">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="w-10 h-10 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-4 w-48" />
+                  <Skeleton className="h-4 w-56" />
+                </div>
+              </div>
+              <div className="flex gap-2 ml-2">
+                <Skeleton className="w-8 h-8 rounded-lg" />
+                <Skeleton className="w-8 h-8 rounded-lg" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Customers() {
   const { customers, loading, saveCustomer, deleteCustomer } = useCustomers();
@@ -125,14 +171,7 @@ function Customers() {
   };
 
   if (loading && customers.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
-          <p className="text-midnight-400">Loading customers...</p>
-        </div>
-      </div>
-    );
+    return <CustomersSkeleton />;
   }
 
   return (

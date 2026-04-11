@@ -19,10 +19,69 @@ import { useInvoices, useTrashInvoices, useBusiness, useSettings } from '../hook
 import { usePDFGenerator } from '../hooks/usePDFGenerator';
 import { formatDate, formatCurrency, calculateInvoiceTotals, getStatusColor, getStatusLabel, matchesSubstringSearch } from '../utils/helpers';
 import type { Invoice, InvoiceStats } from '../types';
+import { Skeleton } from '../components/ui/Skeleton';
 
 type SortField = 'date' | 'amount' | 'customer' | 'number';
 type SortOrder = 'asc' | 'desc';
 type StatusFilter = 'all' | 'draft' | 'pending' | 'paid' | 'overdue';
+
+function InvoicesSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <Skeleton className="h-8 w-32 mb-2" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="flex items-center gap-3 self-start">
+          <Skeleton className="h-10 w-24 rounded-xl" />
+          <Skeleton className="h-10 w-32 rounded-xl" />
+        </div>
+      </div>
+
+      {/* Stats Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {[...Array(5)].map((_, i) => (
+          <Skeleton key={i} className="h-9 w-20 rounded-xl" />
+        ))}
+      </div>
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-12 w-24 rounded-xl" />
+          <Skeleton className="h-12 w-28 rounded-xl" />
+        </div>
+      </div>
+
+      {/* Invoices List */}
+      <div className="space-y-3">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="glass rounded-xl p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </div>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            </div>
+            <div className="flex items-center gap-4 mt-2 sm:mt-0">
+              <Skeleton className="h-8 w-32 ml-auto sm:ml-0" />
+              <Skeleton className="h-9 w-9 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Invoices() {
   const { invoices, loading: invoicesLoading, softDeleteInvoice, restoreInvoice } = useInvoices();
@@ -132,14 +191,7 @@ function Invoices() {
   };
 
   if (loading && invoices.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
-          <p className="text-midnight-400">Loading invoices...</p>
-        </div>
-      </div>
-    );
+    return <InvoicesSkeleton />;
   }
 
   return (

@@ -17,12 +17,84 @@ import { formatCurrency, formatDate, calculateInvoiceTotals, numberToWords, getS
 import { usePDFGenerator } from '../hooks/usePDFGenerator';
 import type { Invoice, InvoiceItem, InvoiceStatus } from '../types';
 import { useInvoice, useBusiness, useSettings } from '../hooks/useData';
+import { Skeleton } from '../components/ui/Skeleton';
 
 interface StatusOption {
   value: InvoiceStatus;
   label: string;
   icon: LucideIcon;
   color: string;
+}
+
+function ViewInvoiceSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header Skeleton */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-9 h-9 rounded-lg" />
+          <div>
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-40" />
+              <Skeleton className="h-6 w-20 rounded-full" />
+            </div>
+            <Skeleton className="h-4 w-32 mt-2" />
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Skeleton className="h-10 w-[72px] sm:w-[100px] rounded-xl" />
+          <Skeleton className="h-10 w-[96px] sm:w-[124px] rounded-xl" />
+          <Skeleton className="h-10 w-[76px] sm:w-[104px] rounded-xl" />
+          <Skeleton className="h-10 w-[114px] sm:w-[142px] rounded-xl" />
+        </div>
+      </div>
+
+      {/* Invoice Preview Skeleton (Light layout) */}
+      <div className="bg-white rounded-2xl shadow-soft overflow-hidden">
+        {/* Title */}
+        <div className="text-center py-4 border-b border-gray-200">
+          <Skeleton className="h-6 w-32 mx-auto !bg-gray-200" />
+        </div>
+
+        {/* Invoice Header */}
+        <div className="px-8 py-6 border-b-2 border-gray-200">
+          <div className="flex justify-between items-start gap-6">
+            <Skeleton className="w-20 h-20 rounded-lg !bg-gray-200" />
+            <div className="flex-1 flex flex-col items-end gap-2">
+              <Skeleton className="h-8 w-48 !bg-gray-200" />
+              <Skeleton className="h-4 w-64 !bg-gray-200" />
+              <Skeleton className="h-4 w-32 !bg-gray-200" />
+            </div>
+          </div>
+        </div>
+
+        {/* Bill To & Details */}
+        <div className="grid grid-cols-2 border-b-2 border-gray-200">
+          <div className="px-6 py-4 border-r-2 border-gray-200 space-y-3">
+            <Skeleton className="h-5 w-24 !bg-gray-200" />
+            <Skeleton className="h-6 w-48 !bg-gray-200" />
+            <Skeleton className="h-4 w-32 !bg-gray-200" />
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <Skeleton className="h-5 w-32 !bg-gray-200" />
+            <Skeleton className="h-4 w-40 !bg-gray-200" />
+            <Skeleton className="h-4 w-36 !bg-gray-200" />
+          </div>
+        </div>
+
+        {/* Items Table skeleton */}
+        <div className="px-6 py-6">
+          <div className="space-y-4">
+             <Skeleton className="h-10 w-full !bg-gray-200" />
+             <Skeleton className="h-10 w-full !bg-gray-200" />
+             <Skeleton className="h-10 w-full !bg-gray-200" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ViewInvoice() {
@@ -41,14 +113,7 @@ function ViewInvoice() {
   const loading = invoiceLoading || businessLoading || settingsLoading;
 
   if (loading && !invoice) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="animate-spin w-8 h-8 text-teal-400" />
-          <p className="text-midnight-400">Loading invoice...</p>
-        </div>
-      </div>
-    );
+    return <ViewInvoiceSkeleton />;
   }
 
   if (!invoice) {

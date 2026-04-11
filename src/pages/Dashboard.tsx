@@ -26,6 +26,7 @@ import {
 } from '../utils/helpers';
 import type { DashboardStats, Invoice } from '../types';
 import { useInvoices, useBusiness } from '../hooks/useData';
+import { Skeleton } from '../components/ui/Skeleton';
 
 function customerInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -99,6 +100,82 @@ function QuickActionRow({ to, title, description, icon: Icon, highlight }: Quick
   );
 }
 
+function DashboardSkeleton() {
+  return (
+    <div className="mx-auto max-w-7xl space-y-8 pb-4 lg:space-y-10 animate-fade-in">
+      {/* Hero Skeleton */}
+      <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-midnight-800/40 p-6 sm:flex sm:items-end sm:justify-between sm:p-8">
+        <div className="relative max-w-xl">
+          <Skeleton className="h-6 w-24 mb-4 rounded-full" />
+          <Skeleton className="h-10 w-64 sm:w-96 mb-3" />
+          <Skeleton className="h-5 w-48 sm:w-80" />
+        </div>
+        <div className="mt-6 shrink-0 sm:mt-0 sm:ml-6">
+          <Skeleton className="h-12 w-full sm:w-32" />
+        </div>
+      </div>
+
+      {/* Stats Skeleton */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="rounded-2xl border border-white/[0.06] bg-midnight-800/40 p-5 sm:p-6 flex justify-between items-start">
+            <div className="flex-1">
+              <Skeleton className="h-3 w-16 mb-4" />
+              <Skeleton className="h-8 w-24 mb-3" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            <Skeleton className="h-12 w-12 rounded-2xl shrink-0" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        {/* Quick actions skeleton */}
+        <section className="lg:col-span-5 xl:col-span-4">
+          <div className="glass h-full rounded-2xl border border-white/[0.04] p-5 sm:p-6">
+            <Skeleton className="h-6 w-32 mb-6" />
+            <div className="flex flex-col gap-3">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center gap-3 p-3.5 border border-white/[0.04] rounded-xl">
+                  <Skeleton className="h-11 w-11 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Recent invoices skeleton */}
+        <section className="lg:col-span-7 xl:col-span-8">
+          <div className="glass h-full rounded-2xl border border-white/[0.04] p-5 sm:p-6">
+            <div className="mb-5 flex justify-between">
+               <Skeleton className="h-6 w-36" />
+               <Skeleton className="h-5 w-16" />
+            </div>
+            <ul className="divide-y divide-white/[0.06]">
+              {[...Array(6)].map((_, i) => (
+                <li key={i} className="flex items-center gap-3 py-3.5 pl-1 pr-2 sm:gap-4 sm:py-4">
+                  <Skeleton className="h-11 w-11 rounded-xl shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                  <div className="shrink-0">
+                    <Skeleton className="h-5 w-20" />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const { business, loading: businessLoading } = useBusiness();
   const { invoices, loading: invoicesLoading } = useInvoices();
@@ -156,14 +233,7 @@ function Dashboard() {
   const welcomeLine = greetingName ? `Welcome back, ${greetingName}!` : 'Welcome back!';
 
   if (loading && invoices.length === 0) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-teal-400" />
-          <p className="text-midnight-400">Loading your dashboard…</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (

@@ -15,6 +15,7 @@ import { useBusiness, useSettings } from '../hooks/useData';
 import { useAuth } from '../contexts/AuthContext';
 import { UserAvatar } from '../components/UserAvatar';
 import { resizeImageFileToJpegDataUrl } from '../utils/resizeAvatarImage';
+import { Skeleton } from '../components/ui/Skeleton';
 
 interface Tab {
   id: 'profile' | 'business' | 'invoice';
@@ -27,6 +28,40 @@ const TABS: Tab[] = [
   { id: 'business', label: 'Business Profile', icon: Building2 },
   { id: 'invoice', label: 'Invoice Settings', icon: FileText },
 ];
+
+function SettingsSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <Skeleton className="h-8 w-32 mb-2" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+        <Skeleton className="h-10 w-36 rounded-xl self-start" />
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-b border-midnight-700 pb-4">
+        <Skeleton className="h-9 w-24 rounded-xl" />
+        <Skeleton className="h-9 w-36 rounded-xl" />
+        <Skeleton className="h-9 w-36 rounded-xl" />
+      </div>
+
+      <div className="glass rounded-2xl p-6 max-w-xl">
+        <Skeleton className="h-6 w-32 mb-2" />
+        <Skeleton className="h-4 w-full mb-1" />
+        <Skeleton className="h-4 w-full mb-6" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+          <Skeleton className="w-20 h-20 rounded-full shrink-0" />
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-10 w-32 rounded-xl" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Settings() {
   const { user, updateProfileAvatar } = useAuth();
@@ -225,14 +260,7 @@ function Settings() {
     (user.user_metadata.profile_avatar as string).length > 0;
 
   if (businessLoading || settingsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
-          <p className="text-midnight-400">Loading settings...</p>
-        </div>
-      </div>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (

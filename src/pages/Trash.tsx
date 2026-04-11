@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Loader2, RefreshCcw, ArrowLeft, Trash2, AlertTriangle, Clock } from 'lucide-react';
 import { useTrashInvoices, useBusiness } from '../hooks/useData';
 import { formatDate, formatCurrency, calculateInvoiceTotals } from '../utils/helpers';
+import { Skeleton } from '../components/ui/Skeleton';
 
 const RETENTION_DAYS = 30;
 
@@ -13,6 +14,54 @@ function getDeletionInfo(deletedAt: string | null | undefined) {
   const daysRemaining = Math.max(0, RETENTION_DAYS - daysAgo);
   const progress = Math.min(100, (daysAgo / RETENTION_DAYS) * 100);
   return { daysAgo, daysRemaining, progress };
+}
+
+function TrashSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <Skeleton className="h-9 w-9 rounded-lg" />
+            <Skeleton className="h-8 w-40" />
+          </div>
+          <Skeleton className="h-4 w-64 ml-10" />
+        </div>
+      </div>
+
+      {/* Trash List */}
+      <div className="space-y-3">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="glass rounded-xl p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex-1">
+                <Skeleton className="h-6 w-48 mb-3" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                {/* Retention progress */}
+                <div className="mt-4 flex items-center gap-2">
+                  <Skeleton className="h-3 w-3 rounded-full" />
+                  <Skeleton className="h-1.5 w-[200px] rounded-full" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+              <div className="flex items-center gap-6 mt-4 sm:mt-0">
+                <Skeleton className="h-8 w-28" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-9 w-24 rounded-lg" />
+                  <Skeleton className="h-9 w-24 rounded-lg" />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export default function Trash() {
@@ -60,14 +109,7 @@ export default function Trash() {
   };
 
   if (loading && invoices.length === 0) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
-          <p className="text-midnight-400">Loading trash...</p>
-        </div>
-      </div>
-    );
+    return <TrashSkeleton />;
   }
 
   return (

@@ -106,7 +106,7 @@ function Layout({ children }: LayoutProps) {
         } ${sidebarCollapsed ? 'w-72 lg:w-28' : 'w-72'}`}
       >
         <div
-          className={`relative flex h-full min-h-0 flex-col rounded-none border-r border-white/[0.07] bg-gradient-to-b from-midnight-800/95 via-midnight-900/98 to-midnight-950 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:m-4 lg:rounded-2xl lg:border lg:border-white/[0.08] lg:shadow-2xl lg:shadow-black/50`}
+          className={`relative flex h-full lg:h-[calc(100%-2rem)] min-h-0 flex-col rounded-none border-r border-white/[0.07] bg-gradient-to-b from-midnight-800/95 via-midnight-900/98 to-midnight-950 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:m-4 lg:rounded-2xl lg:border lg:border-white/[0.08] lg:shadow-2xl lg:shadow-black/50`}
         >
           {/* Desktop: logo only when sidebar expanded; collapse/expand always */}
           <div
