@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, CheckCircle, AlertCircle, KeyRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { Skeleton } from '../components/ui/Skeleton';
 
 function ResetPassword() {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ function ResetPassword() {
             >
               {loading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
                   Updating...
                 </>
               ) : (

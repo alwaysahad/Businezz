@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { uploadLocalDataToCloud } from '../utils/migrationHelper';
+import { Skeleton } from '../components/ui/Skeleton';
 
 function Signup() {
     const navigate = useNavigate();
@@ -180,7 +181,7 @@ function Signup() {
                         >
                             {loading ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
                                     Creating account...
                                 </>
                             ) : (

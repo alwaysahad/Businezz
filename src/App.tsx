@@ -6,7 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PublicRoute from './components/PublicRoute';
 import Layout from './components/Layout';
 import OfflineIndicator from './components/OfflineIndicator';
-import { Loader2 } from 'lucide-react';
+import { Skeleton } from './components/ui/Skeleton';
 
 // Lazy load all page components for code splitting
 const Landing = lazy(() => import('./pages/Landing'));
@@ -26,11 +26,10 @@ const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 // Loading fallback component
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="text-center">
-        <Loader2 className="w-8 h-8 text-teal-400 animate-spin mx-auto mb-4" />
-        <p className="text-midnight-400">Loading...</p>
-      </div>
+    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 p-4">
+      <Skeleton className="h-14 w-14 shrink-0 rounded-2xl" />
+      <Skeleton className="h-4 w-36 rounded-lg" />
+      <Skeleton className="h-3 w-28 rounded-lg" />
     </div>
   );
 }

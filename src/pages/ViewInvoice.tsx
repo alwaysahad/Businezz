@@ -10,7 +10,6 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Loader2,
   type LucideIcon,
 } from 'lucide-react';
 import { formatCurrency, formatDate, calculateInvoiceTotals, numberToWords, getStatusColor, getStatusLabel } from '../utils/helpers';
@@ -250,7 +249,11 @@ function ViewInvoice() {
                   className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(invoice.status)} hover:opacity-80 transition-opacity flex items-center gap-2`}
                   disabled={isUpdatingStatus}
                 >
-                  {isUpdatingStatus ? <Loader2 className="w-3 h-3 animate-spin" /> : getStatusLabel(invoice.status)}
+                  {isUpdatingStatus ? (
+                    <Skeleton className="inline-block h-3.5 min-w-[2.5rem] rounded-full align-middle" />
+                  ) : (
+                    getStatusLabel(invoice.status)
+                  )}
                 </button>
                 {showStatusMenu && (
                   <>

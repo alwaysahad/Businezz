@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { Skeleton } from '../components/ui/Skeleton';
 
 function ForgotPassword() {
     const { resetPassword } = useAuth();
@@ -106,7 +107,7 @@ function ForgotPassword() {
                         >
                             {loading ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
                                     Sending...
                                 </>
                             ) : (

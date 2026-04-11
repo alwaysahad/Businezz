@@ -6,7 +6,6 @@ import {
   Upload,
   Trash2,
   FileText,
-  Loader2,
   User,
   type LucideIcon,
 } from 'lucide-react';
@@ -278,7 +277,7 @@ function Settings() {
         >
           {isSaving ? (
             <>
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
               Saving...
             </>
           ) : saved ? (

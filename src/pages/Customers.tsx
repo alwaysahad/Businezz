@@ -12,7 +12,6 @@ import {
   Mail,
   MapPin,
   FileText,
-  Loader2,
 } from 'lucide-react';
 import { generateId, matchesSubstringSearch } from '../utils/helpers';
 import type { Customer, CustomerFormData, FormErrors } from '../types';
@@ -353,7 +352,7 @@ function Customers() {
             <div className="flex gap-3 mt-6">
               <button onClick={closeModal} className="btn-secondary flex-1">Cancel</button>
               <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {isSaving ? <Skeleton className="h-4 w-4 shrink-0 rounded-full" /> : <Save className="w-4 h-4" />}
                 {editingCustomer ? 'Update' : 'Add Customer'}
               </button>
             </div>

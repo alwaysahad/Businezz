@@ -4,6 +4,7 @@ import { LogIn, Mail, Lock, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { GoogleSignInButton } from '../components/GoogleSignInButton';
+import { Skeleton } from '../components/ui/Skeleton';
 
 function Login() {
     const navigate = useNavigate();
@@ -122,7 +123,7 @@ function Login() {
                         >
                             {loading ? (
                                 <>
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
                                     Signing in...
                                 </>
                             ) : (

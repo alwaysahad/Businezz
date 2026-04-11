@@ -7,7 +7,6 @@ import {
   Package,
   X,
   Save,
-  Loader2,
 } from 'lucide-react';
 import { generateId, formatCurrency, matchesSubstringSearch } from '../utils/helpers';
 import type { Product, ProductFormData, FormErrors } from '../types';
@@ -345,7 +344,7 @@ function Products() {
             <div className="flex gap-3 mt-6">
               <button onClick={closeModal} className="btn-secondary flex-1">Cancel</button>
               <button onClick={handleSave} disabled={isSaving} className="btn-primary flex-1 flex items-center justify-center gap-2">
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {isSaving ? <Skeleton className="h-4 w-4 shrink-0 rounded-full" /> : <Save className="w-4 h-4" />}
                 {editingProduct ? 'Update' : 'Add Product'}
               </button>
             </div>

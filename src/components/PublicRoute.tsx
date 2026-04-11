@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
-import { Receipt } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { Skeleton } from './ui/Skeleton';
 
 interface PublicRouteProps {
     children: React.ReactNode;
@@ -18,11 +18,10 @@ function PublicRoute({ children }: PublicRouteProps) {
     // Show loading state while checking authentication
     if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-midnight-900 via-midnight-800 to-midnight-900 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-teal-400 to-teal-600 mb-6 animate-pulse">
-                        <Receipt className="w-10 h-10 text-white" />
-                    </div>
+            <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-midnight-900 via-midnight-800 to-midnight-900">
+                <div className="flex flex-col items-center gap-4">
+                    <Skeleton className="h-20 w-20 shrink-0 rounded-2xl" />
+                    <Skeleton className="h-5 w-32 rounded-lg" />
                 </div>
             </div>
         );

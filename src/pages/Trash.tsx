@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, RefreshCcw, ArrowLeft, Trash2, AlertTriangle, Clock } from 'lucide-react';
+import { RefreshCcw, ArrowLeft, Trash2, AlertTriangle, Clock } from 'lucide-react';
 import { useTrashInvoices, useBusiness } from '../hooks/useData';
 import { formatDate, formatCurrency, calculateInvoiceTotals } from '../utils/helpers';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -208,7 +208,7 @@ export default function Trash() {
                         className="btn-secondary flex items-center gap-2 py-2 px-3 border-teal-500/30 hover:border-teal-500 hover:bg-teal-500/10 text-teal-400 transition-colors"
                         title="Restore"
                       >
-                        {restoringId === invoice.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCcw className="w-4 h-4" />}
+                        {restoringId === invoice.id ? <Skeleton className="h-4 w-4 shrink-0 rounded-full" /> : <RefreshCcw className="w-4 h-4" />}
                         <span className="hidden sm:inline">Restore</span>
                       </button>
                       <button
@@ -248,7 +248,7 @@ export default function Trash() {
                 className="btn-danger flex items-center gap-2"
                 disabled={deletingId !== null}
               >
-                {deletingId ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {deletingId ? <Skeleton className="h-4 w-4 shrink-0 rounded-full" /> : <Trash2 className="w-4 h-4" />}
                 {deletingId ? 'Deleting...' : 'Delete Forever'}
               </button>
             </div>
@@ -282,7 +282,7 @@ export default function Trash() {
                 className="btn-danger flex items-center gap-2"
                 disabled={emptyingTrash}
               >
-                {emptyingTrash ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {emptyingTrash ? <Skeleton className="h-4 w-4 shrink-0 rounded-full" /> : <Trash2 className="w-4 h-4" />}
                 {emptyingTrash ? 'Emptying...' : 'Empty Trash'}
               </button>
             </div>

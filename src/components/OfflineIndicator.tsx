@@ -1,4 +1,5 @@
-import { Wifi, WifiOff, Cloud, Loader2, AlertCircle } from 'lucide-react';
+import { Wifi, WifiOff, Cloud, AlertCircle } from 'lucide-react';
+import { Skeleton } from './ui/Skeleton';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { useState } from 'react';
 import SyncStatus from '../components/SyncStatus';
@@ -33,7 +34,7 @@ export default function OfflineIndicator() {
                     title={isOnline ? 'Online' : 'Offline - Click for details'}
                 >
                     {isSyncing ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <Skeleton className="h-4 w-4 shrink-0 rounded-full" />
                     ) : isOnline ? (
                         <Wifi className="w-4 h-4" />
                     ) : (

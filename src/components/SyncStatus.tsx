@@ -1,5 +1,6 @@
 import { X, Cloud, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { Skeleton } from './ui/Skeleton';
 
 interface SyncStatusProps {
     onClose: () => void;
@@ -164,7 +165,11 @@ export default function SyncStatus({ onClose }: SyncStatusProps) {
                             disabled={isSyncing}
                             className="btn-primary flex-1 flex items-center justify-center gap-2"
                         >
-                            <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                            {isSyncing ? (
+                                <Skeleton className="h-4 w-4 shrink-0 rounded-full" />
+                            ) : (
+                                <RefreshCw className="h-4 w-4" />
+                            )}
                             {isSyncing ? 'Syncing...' : 'Sync Now'}
                         </button>
                     )}

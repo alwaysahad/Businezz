@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { Skeleton } from './ui/Skeleton';
 
 type GoogleSignInButtonProps = {
   onClick: () => void;
@@ -44,7 +44,7 @@ export function GoogleSignInButton({
       className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl border border-midnight-600 bg-midnight-800/80 hover:bg-midnight-700 text-white text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {loading ? (
-        <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+        <Skeleton className="h-5 w-5 shrink-0 rounded-full" />
       ) : (
         <GoogleMark className="w-5 h-5 shrink-0" />
       )}

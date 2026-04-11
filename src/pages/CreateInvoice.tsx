@@ -8,7 +8,6 @@ import {
   Eye,
   ArrowLeft,
   User,
-  Loader2,
   Receipt,
 } from 'lucide-react';
 import { generateId, formatCurrency, formatDate, calculateInvoiceTotals, matchesSubstringSearch } from '../utils/helpers';
@@ -737,7 +736,7 @@ function CreateInvoice() {
             disabled={isSaving}
             className="btn-secondary flex items-center justify-center gap-2 flex-1 sm:flex-none sm:min-w-[140px]"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {isSaving ? <Skeleton className="h-4 w-4 shrink-0 rounded-full" /> : <Save className="w-4 h-4" />}
             <span>Save Draft</span>
           </button>
           <button
@@ -745,7 +744,7 @@ function CreateInvoice() {
             disabled={isSaving}
             className="btn-primary flex items-center justify-center gap-2 flex-1 sm:flex-none sm:min-w-[160px]"
           >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+            {isSaving ? <Skeleton className="h-4 w-4 shrink-0 rounded-full" /> : <Eye className="w-4 h-4" />}
             <span>Save & Preview</span>
           </button>
         </div>
