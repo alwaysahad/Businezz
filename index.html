@@ -3,6 +3,21 @@
 
 <head>
   <meta charset="UTF-8" />
+  <!-- Unregister legacy PWA service workers before the app loads (they precached old JS and caused stale deploys after OAuth). -->
+  <script>
+    (function () {
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          rs.forEach(function (r) { r.unregister(); });
+        });
+      }
+      if (typeof caches !== 'undefined') {
+        caches.keys().then(function (keys) {
+          keys.forEach(function (k) { caches.delete(k); });
+        });
+      }
+    })();
+  </script>
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
   <link rel="icon" type="image/svg+xml" href="/invoice-icon.svg" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />

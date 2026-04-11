@@ -20,24 +20,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/** True on the first document load after redirect from Google / Supabase (PKCE or implicit). */
-const oauthReturnNeedsHardRefresh =
-  typeof window !== 'undefined' &&
-  (/[?&]code=/.test(window.location.search) ||
-    window.location.hash.includes('access_token'));
-
-let oauthHardRefreshScheduled = false;
-
-function stripOAuthParamsFromUrl() {
-  const u = new URL(window.location.href);
-  for (const p of ['code', 'state', 'error', 'error_description']) {
-    u.searchParams.delete(p);
-  }
-  const qs = u.search;
-  const path = u.pathname + (qs ? qs : '') + (u.hash.includes('access_token') ? '' : u.hash);
-  window.history.replaceState(null, '', path);
-}
-
 /** Clears React Query when the signed-in user changes so another account never sees cached data. */
 function AuthSessionQueryReset() {
   const queryClient = useQueryClient();
@@ -78,28 +60,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-
-      // After external OAuth, force a clean document + drop stale SW/Cache API entries (single-use ?code= is stripped first).
-      if (
-        event === 'SIGNED_IN' &&
-        session &&
-        oauthReturnNeedsHardRefresh &&
-        !oauthHardRefreshScheduled
-      ) {
-        oauthHardRefreshScheduled = true;
-        stripOAuthParamsFromUrl();
-        const clearCaches =
-          typeof caches !== 'undefined'
-            ? caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
-            : Promise.resolve();
-        void clearCaches.then(() => {
-          window.location.reload();
-        });
-      }
     });
 
     return () => subscription.unsubscribe();
@@ -150,8 +114,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    if (!supabase) return;
-    await supabase.auth.signOut();
+    if (!supabase) {
+      setSession(null);
+      setUser(null);
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.warn('Supabase signOut:', error.message);
+      }
+    } finally {
+      // Always clear UI state immediately. Otherwise navigate('/') can run before SIGNED_OUT is applied and
+      // PublicRoute still sees user → redirects back to /dashboard (sign out appears broken).
+      setSession(null);
+      setUser(null);
+    }
   };
 
   const resetPassword = async (email: string) => {

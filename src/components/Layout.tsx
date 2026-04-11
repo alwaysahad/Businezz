@@ -80,8 +80,9 @@ function Layout({ children }: LayoutProps) {
   };
 
   const handleSignOut = async () => {
+    setUserMenuOpen(false);
     await signOut();
-    navigate('/');
+    navigate('/login', { replace: true });
   };
 
   const toggleDesktopSidebar = () => {
@@ -320,7 +321,7 @@ function Layout({ children }: LayoutProps) {
                         <button
                           type="button"
                           role="menuitem"
-                          onClick={handleSignOut}
+                          onClick={() => void handleSignOut()}
                           className="flex w-full items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium text-coral-400 transition-colors hover:bg-coral-500/10"
                         >
                           <LogOut className="h-4 w-4 shrink-0" />
@@ -391,7 +392,7 @@ function Layout({ children }: LayoutProps) {
                       </div>
                       <button
                         type="button"
-                        onClick={handleSignOut}
+                        onClick={() => void handleSignOut()}
                         className="flex w-full items-center gap-3 px-3 py-2.5 text-sm font-medium text-coral-400 transition-colors hover:bg-coral-500/10"
                       >
                         <LogOut className="h-4 w-4" />
