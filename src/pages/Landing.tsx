@@ -12,10 +12,10 @@ import {
     Users,
     BarChart3,
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+
 
 function Landing() {
-    const { user } = useAuth();
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-midnight-950 via-midnight-900 to-midnight-950">
