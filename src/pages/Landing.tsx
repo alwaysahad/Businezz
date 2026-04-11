@@ -1,5 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
     FileText,
     Zap,
@@ -17,14 +16,6 @@ import { useAuth } from '../contexts/AuthContext';
 
 function Landing() {
     const { user } = useAuth();
-    const navigate = useNavigate();
-
-    // Redirect logged-in users to dashboard
-    useEffect(() => {
-        if (user) {
-            navigate('/dashboard');
-        }
-    }, [user, navigate]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-midnight-950 via-midnight-900 to-midnight-950">

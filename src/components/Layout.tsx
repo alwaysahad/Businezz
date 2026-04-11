@@ -103,14 +103,14 @@ function Layout({ children }: LayoutProps) {
       <aside
         className={`fixed inset-y-0 left-0 z-50 will-change-[width,transform] transition-[width,transform] duration-sidebar ease-sidebar motion-reduce:transition-none motion-reduce:duration-0 group/sidebar ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        } ${sidebarCollapsed ? 'lg:w-28' : 'w-72'}`}
+        } ${sidebarCollapsed ? 'w-72 lg:w-28' : 'w-72'}`}
       >
         <div
-          className={`relative flex h-full min-h-0 flex-col overflow-hidden rounded-none border-r border-white/[0.07] bg-gradient-to-b from-midnight-800/95 via-midnight-900/98 to-midnight-950 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:m-4 lg:rounded-2xl lg:border lg:border-white/[0.08] lg:shadow-2xl lg:shadow-black/50`}
+          className={`relative flex h-full min-h-0 flex-col rounded-none border-r border-white/[0.07] bg-gradient-to-b from-midnight-800/95 via-midnight-900/98 to-midnight-950 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:m-4 lg:rounded-2xl lg:border lg:border-white/[0.08] lg:shadow-2xl lg:shadow-black/50`}
         >
           {/* Desktop: logo only when sidebar expanded; collapse/expand always */}
           <div
-            className={`hidden shrink-0 border-b border-white/[0.06] bg-midnight-950/20 lg:flex lg:items-center ${
+            className={`hidden shrink-0 border-b border-white/[0.06] bg-midnight-950/20 lg:flex lg:items-center lg:rounded-t-2xl ${
               sidebarCollapsed ? 'lg:justify-center lg:px-3 lg:py-2.5' : 'lg:gap-3 lg:px-4 lg:py-3.5'
             }`}
           >
@@ -234,7 +234,7 @@ function Layout({ children }: LayoutProps) {
 
           {/* Footer: sync + user */}
           <div
-            className={`shrink-0 space-y-3 border-t border-white/[0.06] bg-midnight-950/30 transition-[padding] duration-sidebar ease-sidebar motion-reduce:transition-none ${
+            className={`shrink-0 space-y-3 border-t border-white/[0.06] bg-midnight-950/30 transition-[padding] duration-sidebar ease-sidebar motion-reduce:transition-none lg:rounded-b-2xl ${
               sidebarCollapsed ? 'p-3 lg:px-2.5 lg:py-3' : 'px-3 pb-4 pt-3'
             }`}
           >
