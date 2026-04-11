@@ -26,25 +26,14 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
+        // Do not precache HTML: stale index.html pins old hashed JS after deploys. Navigations use the network (CDN).
+        globPatterns: ['**/*.{js,css,ico,png,svg,webp,woff,woff2}'],
+        navigateFallback: null,
+        skipWaiting: true,
+        clientsClaim: true,
         globIgnores: ['**/node_modules/**/*'],
+        // Never cache Supabase in the SW: keys are URL-only (no Authorization), so responses can leak across users/sessions.
         runtimeCaching: [
-          {
-            // Cache Supabase API calls
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              },
-              networkTimeoutSeconds: 10
-            }
-          },
           {
             // Cache Google Fonts
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -79,8 +68,7 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true,
-        type: 'module',
-        navigateFallback: 'index.html'
+        type: 'module'
       }
     })
   ],

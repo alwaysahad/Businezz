@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
 
@@ -18,6 +19,24 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/** Clears React Query when the signed-in user changes so another account never sees cached data. */
+function AuthSessionQueryReset() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const prevUserId = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const id = user?.id;
+    const prev = prevUserId.current;
+    if (prev !== undefined && prev !== id) {
+      queryClient.clear();
+    }
+    prevUserId.current = id;
+  }, [user?.id, queryClient]);
+
+  return null;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -148,7 +167,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     updateProfileAvatar,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      <AuthSessionQueryReset />
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {

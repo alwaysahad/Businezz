@@ -24,12 +24,11 @@ const queryClient = new QueryClient({
   },
 });
 
-// Register service worker for PWA functionality
+// Register service worker for PWA functionality (autoUpdate: reload as soon as a new build is deployed)
 const updateSW = registerSW({
+  immediate: true,
   onNeedRefresh() {
-    if (confirm('New version available! Reload to update?')) {
-      updateSW(true);
-    }
+    void updateSW(true);
   },
   onOfflineReady() {
     console.log('App ready to work offline');
