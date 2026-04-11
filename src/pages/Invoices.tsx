@@ -13,7 +13,6 @@ import {
   Calendar,
   SortAsc,
   SortDesc,
-  Loader2,
 } from 'lucide-react';
 import { useInvoices, useTrashInvoices, useBusiness, useSettings } from '../hooks/useData';
 import { usePDFGenerator } from '../hooks/usePDFGenerator';

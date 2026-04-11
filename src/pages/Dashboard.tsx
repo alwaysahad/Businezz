@@ -9,7 +9,6 @@ import {
   Plus,
   ArrowRight,
   IndianRupee,
-  Loader2,
   LayoutDashboard,
   Users,
   ListOrdered,
