@@ -45,10 +45,9 @@ const formatPDFCurrency = (amount: number | string, currency: string = 'Rs.'): s
     })}`;
 };
 
-// Helper function to check if content fits on current page and add new page if needed
 const checkAndAddPage = (doc: jsPDF, currentY: number, requiredSpace: number, margin: number = 15): number => {
     const pageHeight = doc.internal.pageSize.getHeight();
-    const bottomMargin = 20;
+    const bottomMargin = 15;
 
     if (currentY + requiredSpace > pageHeight - bottomMargin) {
         doc.addPage();
@@ -103,8 +102,8 @@ const generateInvoicePDF = (
     // Business Details - Right aligned
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    const businessNameY = y + 5;
-    doc.text(business.name || 'Business Name', pageWidth - margin, businessNameY, { align: 'right' });
+    y += 5;
+    doc.text(business.name || 'Business Name', pageWidth - margin, y, { align: 'right' });
 
     y += 8;
     doc.setFontSize(8);
@@ -213,15 +212,40 @@ const generateInvoicePDF = (
         ];
     });
 
+    // Calculate space needed for footer section early to ensure table leaves room for it
+    const amountWords = `${numberToWords(Math.floor(totals.total))} Rupees only`;
+    const wordsLines = doc.splitTextToSize(amountWords, (pageWidth / 2) - margin - 10);
+    const notesLines = invoice.notes ? doc.splitTextToSize(invoice.notes, (pageWidth / 2) - margin - 10) : [];
+    
+    // More accurate footer height calculation. Right column (signature) takes ~32mm max.
+    const footerHeight = Math.max(
+        20 + wordsLines.length * 4 + (notesLines.length > 0 ? 5 + notesLines.length * 4 : 0),
+        32
+    );
+
+    let tableFontSize = 7;
+    let tableCellPadding = 2;
+
+    if (invoice.items.length <= 5) {
+        tableFontSize = 9;
+        tableCellPadding = 3.5;
+    } else if (invoice.items.length <= 9) {
+        tableFontSize = 8;
+        tableCellPadding = 3;
+    } else if (invoice.items.length <= 13) {
+        tableFontSize = 8;
+        tableCellPadding = 2;
+    }
+
     doc.autoTable({
         startY: y,
         head: [['#', 'Item name', 'Qty', 'Unit', 'Price/Unit', 'Disc %', 'Tax %', 'Amount']],
         body: tableData,
-        margin: { left: margin, right: margin },
+        margin: { top: margin, left: margin, right: margin, bottom: margin },
         tableWidth: contentWidth,
         styles: {
-            fontSize: 7,
-            cellPadding: 2,
+            fontSize: tableFontSize,
+            cellPadding: tableCellPadding,
             lineColor: [0, 0, 0],
             lineWidth: 0.1,
             textColor: [0, 0, 0],
@@ -247,10 +271,11 @@ const generateInvoicePDF = (
         },
     });
 
-    y = doc.lastAutoTable.finalY + 5;
+    y = doc.lastAutoTable.finalY + 3;
 
-    // Check if we need a new page for the summary section
-    y = checkAndAddPage(doc, y, 30, margin);
+    // Check if we need a new page for BOTH the summary section (approx 30) and footer
+    // This prevents the summary from being left at the bottom of page 1 while footer is pushed to page 2
+    y = checkAndAddPage(doc, y, 30 + footerHeight, margin);
 
     onProgress?.(80, 'Adding totals and tax details...');
 
@@ -318,23 +343,14 @@ const generateInvoicePDF = (
     doc.text('Total', rightColX, amountY);
     doc.text(formatPDFCurrency(totals.total, currency), pageWidth - margin, amountY, { align: 'right' });
 
-    y = Math.max(taxTableEndY, amountY) + 8;
+    y = Math.max(taxTableEndY, amountY) + 5;
 
     // Horizontal line
     doc.setLineWidth(0.5);
     doc.line(margin, y, pageWidth - margin, y);
-    y += 8;
+    y += 5;
 
     onProgress?.(90, 'Adding footer...');
-
-    // Calculate space needed for footer section
-    const amountWords = `${numberToWords(Math.floor(totals.total))} Rupees only`;
-    const wordsLines = doc.splitTextToSize(amountWords, (pageWidth / 2) - margin - 10);
-    const notesLines = invoice.notes ? doc.splitTextToSize(invoice.notes, (pageWidth / 2) - margin - 10) : [];
-    const footerHeight = 15 + wordsLines.length * 4 + 10 + (notesLines.length * 4) + 35;
-
-    // Check if we need a new page for the footer section
-    y = checkAndAddPage(doc, y, footerHeight, margin);
 
     // Footer section - Two columns
     const footerStartY = y;
@@ -350,15 +366,14 @@ const generateInvoicePDF = (
     doc.text(wordsLines, leftColX, y);
     y += wordsLines.length * 4 + 5;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('Terms and conditions', leftColX, y);
-    y += 5;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7);
-
     if (invoice.notes) {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.text('Terms and conditions', leftColX, y);
+        y += 5;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
         y += 2;
         doc.text(notesLines, leftColX, y);
         y += notesLines.length * 4;
@@ -369,19 +384,19 @@ const generateInvoicePDF = (
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.text(`For: ${business.name || 'Your Business Name'}`, rightColX, sigY);
-    sigY += 10;
+    sigY += 6;
 
     // Add signature image if available
     if (business.signature) {
         try {
             doc.addImage(business.signature, 'PNG', rightColX + 15, sigY, 30, 15);
-            sigY += 20;
+            sigY += 18;
         } catch (error) {
             console.error('Failed to add signature to PDF:', error);
-            sigY += 15;
+            sigY += 10;
         }
     } else {
-        sigY += 15;
+        sigY += 10;
     }
 
     doc.setLineWidth(0.3);
